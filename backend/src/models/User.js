@@ -1,0 +1,167 @@
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const userSchema = new mongoose.Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+      minlength: [2, 'Name must be at least 2 characters'],
+      maxlength: [50, 'Name cannot exceed 50 characters'],
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
+    },
+    password: {
+      type: String,
+      required: [true, 'Password is required'],
+      minlength: [6, 'Password must be at least 6 characters'],
+      select: false,
+    },
+    avatar: {
+      type: String,
+      default: '',
+    },
+    vehicleType: {
+      type: String,
+      enum: ['car', 'electric', 'bus', 'bike', 'walk', 'motorcycle'],
+      default: 'car',
+    },
+    homeLocation: {
+      address: { type: String, default: '' },
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
+    workLocation: {
+      address: { type: String, default: '' },
+      lat: { type: Number, default: null },
+      lng: { type: Number, default: null },
+    },
+    // Green metrics
+    greenScore: {
+      type: Number,
+      default: 50,
+      min: 0,
+      max: 100,
+    },
+    totalCO2Saved: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalCO2Emitted: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalTrips: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    totalDistanceKm: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    carpoolsJoined: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    carpoolsOffered: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    // Preferences
+    preferences: {
+      optimizeFor: {
+        type: String,
+        enum: ['carbon', 'time', 'distance', 'balanced'],
+        default: 'carbon',
+      },
+      avoidCongestion: { type: Boolean, default: true },
+      maxDetourMinutes: { type: Number, default: 10 },
+      genderPreference: {
+        type: String,
+        enum: ['any', 'male', 'female'],
+        default: 'any',
+      },
+      notifications: {
+        carpoolMatch: { type: Boolean, default: true },
+        tripComplete: { type: Boolean, default: true },
+        weeklyReport: { type: Boolean, default: true },
+      },
+    },
+    // Auth
+    isVerified: { type: Boolean, default: false },
+    isActive: { type: Boolean, default: true },
+    lastLogin: { type: Date, default: null },
+    refreshToken: { type: String, select: false },
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
+);
+
+// Indexes
+userSchema.index({ email: 1 });
+userSchema.index({ greenScore: -1 });
+userSchema.index({ totalCO2Saved: -1 });
+
+// Virtual: rank label
+userSchema.virtual('greenRank').get(function () {
+  const s = this.greenScore;
+  if (s >= 80) return 'Eco Champion 🌟';
+  if (s >= 60) return 'Green Commuter 🟢';
+  if (s >= 40) return 'Eco Aware 🟡';
+  return 'Getting Started 🌱';
+});
+
+// Hash password before save
+userSchema.pre('save', async function (next) {
+  if (!this.isModified('password')) return next();
+  const salt = await bcrypt.genSalt(12);
+  this.password = await bcrypt.hash(this.password, salt);
+  next();
+});
+
+// Compare password method
+userSchema.methods.comparePassword = async function (candidatePassword) {
+  return bcrypt.compare(candidatePassword, this.password);
+};
+
+// Update green metrics
+userSchema.methods.updateGreenMetrics = async function (tripData) {
+  this.totalTrips += 1;
+  this.totalDistanceKm += tripData.distanceKm || 0;
+  this.totalCO2Emitted += tripData.co2Emitted || 0;
+  this.totalCO2Saved += tripData.co2Saved || 0;
+
+  // Recalculate green score as rolling average
+  const savingsRatio =
+    this.totalCO2Saved / (this.totalCO2Emitted + this.totalCO2Saved + 1);
+  this.greenScore = Math.round(Math.min(100, 50 + savingsRatio * 50));
+
+  await this.save();
+};
+
+// Remove sensitive fields from JSON
+userSchema.methods.toSafeObject = function () {
+  const obj = this.toObject();
+  delete obj.password;
+  delete obj.refreshToken;
+  delete obj.__v;
+  return obj;
+};
+
+module.exports = mongoose.model('User', userSchema);

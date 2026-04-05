@@ -1,0 +1,30 @@
+{
+  "description": "Sample road network for AUMO testing",
+  "version": "2.0",
+  "nodes": {
+    "n1": { "lat": 18.5204, "lng": 73.8567, "type": "intersection" },
+    "n2": { "lat": 18.5220, "lng": 73.8580, "type": "intersection" },
+    "n3": { "lat": 18.5235, "lng": 73.8600, "type": "intersection" },
+    "n4": { "lat": 18.5250, "lng": 73.8620, "type": "intersection" },
+    "n5": { "lat": 18.5204, "lng": 73.8620, "type": "intersection" },
+    "n6": { "lat": 18.5220, "lng": 73.8640, "type": "intersection" },
+    "n7": { "lat": 18.5235, "lng": 73.8567, "type": "intersection" },
+    "n8": { "lat": 18.5250, "lng": 73.8580, "type": "intersection" }
+  },
+  "edges": [
+    { "from": "n1", "to": "n2", "distance_km": 0.25, "speed_limit_kmh": 40, "road_type": "primary",     "name": "MG Road",      "id": "e1" },
+    { "from": "n2", "to": "n3", "distance_km": 0.30, "speed_limit_kmh": 40, "road_type": "primary",     "name": "MG Road",      "id": "e2" },
+    { "from": "n3", "to": "n4", "distance_km": 0.28, "speed_limit_kmh": 40, "road_type": "primary",     "name": "MG Road",      "id": "e3" },
+    { "from": "n1", "to": "n5", "distance_km": 0.45, "speed_limit_kmh": 50, "road_type": "secondary",   "name": "FC Road",      "id": "e4" },
+    { "from": "n5", "to": "n6", "distance_km": 0.35, "speed_limit_kmh": 30, "road_type": "residential", "name": "Lane 5",       "id": "e5" },
+    { "from": "n2", "to": "n7", "distance_km": 0.20, "speed_limit_kmh": 30, "road_type": "residential", "name": "Cross Road 1", "id": "e6" },
+    { "from": "n7", "to": "n8", "distance_km": 0.25, "speed_limit_kmh": 40, "road_type": "primary",     "name": "JM Road",      "id": "e7" },
+    { "from": "n4", "to": "n6", "distance_km": 0.30, "speed_limit_kmh": 50, "road_type": "secondary",   "name": "DP Road",      "id": "e8" },
+    { "from": "n3", "to": "n8", "distance_km": 0.22, "speed_limit_kmh": 30, "road_type": "residential", "name": "Cross Road 2", "id": "e9" }
+  ],
+  "pois": [
+    { "id": "p1", "name": "Pune Railway Station", "lat": 18.5204, "lng": 73.8567, "category": "transport" },
+    { "id": "p2", "name": "FC Road Bus Stop",     "lat": 18.5220, "lng": 73.8580, "category": "bus_stop"  },
+    { "id": "p3", "name": "Aga Khan Palace",      "lat": 18.5235, "lng": 73.8600, "category": "tourism"   }
+  ]
+}

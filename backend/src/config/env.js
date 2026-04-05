@@ -1,0 +1,43 @@
+const required = [
+  'MONGODB_URI',
+  'JWT_SECRET',
+];
+
+const optional = [
+  'AI_SERVICE_URL',
+  'FRONTEND_URL',
+  'ORS_API_KEY',
+  'PORT',
+  'NODE_ENV',
+];
+
+const validateEnv = () => {
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    console.error(`❌ Missing required environment variables: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+
+  optional.forEach((key) => {
+    if (!process.env[key]) {
+      console.warn(`⚠️  Optional env var not set: ${key}`);
+    }
+  });
+
+  console.log('�� Environment variables validated');
+};
+
+const config = {
+  port: parseInt(process.env.PORT) || 5000,
+  nodeEnv: process.env.NODE_ENV || 'development',
+  mongoUri: process.env.MONGODB_URI,
+  jwtSecret: process.env.JWT_SECRET,
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN || '7d',
+  aiServiceUrl: process.env.AI_SERVICE_URL || 'http://localhost:7860',
+  frontendUrl: process.env.FRONTEND_URL || 'http://localhost:3000',
+  orsApiKey: process.env.ORS_API_KEY || '',
+  isProduction: process.env.NODE_ENV === 'production',
+  isDevelopment: process.env.NODE_ENV !== 'production',
+};
+
+module.exports = { validateEnv, config };

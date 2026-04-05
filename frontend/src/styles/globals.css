@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+/* ── Leaflet overrides ──────────────────────────────────────────────────── */
+@import 'leaflet/dist/leaflet.css';
+
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  font-family: 'Inter', sans-serif;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  border: none;
+}
+
+.leaflet-popup-content {
+  margin: 12px 16px;
+  font-family: 'Inter', sans-serif;
+}
+
+.leaflet-control-zoom a {
+  border-radius: 8px !important;
+  font-size: 18px !important;
+}
+
+/* ── Custom scrollbar ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #4ade80; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #22c55e; }
+
+/* ── Base styles ────────────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+  overflow-x: hidden;
+}
+
+/* ── Glass morphism ─────────────────────────────────────────────────────── */
+.glass {
+  background: rgba(30, 41, 59, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.glass-light {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ── Green route polyline ───────────────────────────────────────────────── */
+.route-eco    { stroke: #22c55e !important; }
+.route-fast   { stroke: #ef4444 !important; }
+.route-short  { stroke: #3b82f6 !important; }
+.route-bal    { stroke: #f59e0b !important; }
+
+/* ── Custom map markers ─────────────────────────────────────────────────── */
+.custom-marker {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; border: 3px solid white;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  font-size: 16px;
+}
+
+.marker-origin      { background: #22c55e; width: 36px; height: 36px; }
+.marker-destination { background: #ef4444; width: 36px; height: 36px; }
+.marker-poi         { background: #3b82f6; width: 28px; height: 28px; }
+.marker-bus         { background: #f59e0b; width: 28px; height: 28px; }
+.marker-carpool     { background: #8b5cf6; width: 32px; height: 32px; }
+
+/* ── Skeleton loader ────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Green score ring ───────────────────────────────────────────────────── */
+.score-ring {
+  stroke-dasharray: 251.2;
+  stroke-dashoffset: 251.2;
+  transition: stroke-dashoffset 1s ease;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+/* ── Responsive map panel ───────────────────────────────────────────────── */
+.map-panel {
+  position: absolute;
+  top: 0; left: 0;
+  height: 100%;
+  width: 380px;
+  z-index: 1000;
+  overflow-y: auto;
+  pointer-events: auto;
+}
+
+@media (max-width: 768px) {
+  .map-panel {
+    width: 100%;
+    height: auto;
+    max-height: 60vh;
+    top: auto;
+    bottom: 0;
+    border-radius: 20px 20px 0 0;
+  }
+}

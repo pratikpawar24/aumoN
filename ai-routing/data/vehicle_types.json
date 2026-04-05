@@ -1,0 +1,44 @@
+{
+  "car": {
+    "label": "Car (Petrol)",
+    "icon": "🚗",
+    "max_passengers": 4,
+    "avg_speed_kmh": 40,
+    "emission_g_per_km": 150
+  },
+  "electric": {
+    "label": "Electric Car",
+    "icon": "⚡",
+    "max_passengers": 4,
+    "avg_speed_kmh": 45,
+    "emission_g_per_km": 55
+  },
+  "bus": {
+    "label": "Bus",
+    "icon": "🚌",
+    "max_passengers": 50,
+    "avg_speed_kmh": 25,
+    "emission_g_per_km": 90
+  },
+  "bike": {
+    "label": "Bicycle",
+    "icon": "🚲",
+    "max_passengers": 1,
+    "avg_speed_kmh": 15,
+    "emission_g_per_km": 0
+  },
+  "walk": {
+    "label": "Walking",
+    "icon": "🚶",
+    "max_passengers": 1,
+    "avg_speed_kmh": 5,
+    "emission_g_per_km": 0
+  },
+  "motorcycle": {
+    "label": "Motorcycle",
+    "icon": "🏍️",
+    "max_passengers": 2,
+    "avg_speed_kmh": 50,
+    "emission_g_per_km": 100
+  }
+}
