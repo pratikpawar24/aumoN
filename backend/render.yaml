@@ -1,9 +1,11 @@
+# render.yaml — place this in ROOT of repo (aumoN/render.yaml)
 services:
   - type: web
     name: aumo-backend
     env: node
     region: oregon
     plan: free
+    rootDir: backend
     buildCommand: npm install
     startCommand: node server.js
     healthCheckPath: /health

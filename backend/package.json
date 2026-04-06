@@ -1,6 +1,6 @@
 {
   "name": "aumo-backend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AUMO Backend API - AI-powered Urban Mobility Optimizer",
   "main": "server.js",
   "scripts": {
