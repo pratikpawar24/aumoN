@@ -1,15 +1,21 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, MapPin, Navigation, Building2, ShoppingBag, Bus } from 'lucide-react';
+import { Search, X, MapPin, Bus, Building2, ShoppingBag } from 'lucide-react';
 import mapService from '../../services/mapService';
-import { debounce } from '../../utils/helpers';
 import { Spinner } from '../Common/Loading';
 
 const CATEGORY_ICONS = {
-  bus_stop:  <Bus  className="w-3 h-3 text-yellow-400" />,
-  building:  <Building2 className="w-3 h-3 text-blue-400" />,
-  shop:      <ShoppingBag className="w-3 h-3 text-orange-400" />,
-  address:   <MapPin className="w-3 h-3 text-green-400" />,
-  default:   <MapPin className="w-3 h-3 text-slate-400" />,
+  bus_stop: <Bus       className="w-3 h-3 text-yellow-400" />,
+  building: <Building2 className="w-3 h-3 text-blue-400"  />,
+  shop:     <ShoppingBag className="w-3 h-3 text-orange-400" />,
+  default:  <MapPin    className="w-3 h-3 text-slate-400"  />,
+};
+
+const useDebounce = (fn, delay) => {
+  const timerRef = useRef(null);
+  return useCallback((...args) => {
+    clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]);
 };
 
 const SearchBox = ({
@@ -24,13 +30,11 @@ const SearchBox = ({
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open,    setOpen]    = useState(false);
-  const inputRef  = useRef(null);
+  const inputRef     = useRef(null);
   const containerRef = useRef(null);
 
-  // Sync external value
   useEffect(() => { setQuery(externalValue); }, [externalValue]);
 
-  // Click outside to close
   useEffect(() => {
     const handler = (e) => {
       if (containerRef.current && !containerRef.current.contains(e.target)) {
@@ -41,47 +45,52 @@ const SearchBox = ({
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const search = useCallback(
-    debounce(async (q) => {
-      if (!q || q.trim().length < 2) { setResults([]); setOpen(false); return; }
-      setLoading(true);
+  const performSearch = useCallback(async (q) => {
+    if (!q || q.trim().length < 2) {
+      setResults([]);
+      setOpen(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      let res = [];
       try {
-        // Try Photon first (faster), fall back to Nominatim
-        let res = [];
-        try {
-          res = await mapService.photonSearch(q, null, null, 8);
-        } catch {
-          const nom = await mapService.nominatimSearch(q, 8);
-          res = nom.map((r) => ({
-            id:       r.place_id,
-            name:     r.display_name?.split(',')[0] || '',
-            display:  r.display_name || '',
-            lat:      parseFloat(r.lat),
-            lng:      parseFloat(r.lon),
-            category: r.class || 'address',
-            type:     r.type,
-          }));
-        }
-        setResults(res.slice(0, 8));
-        setOpen(res.length > 0);
-      } catch { setResults([]); }
-      finally { setLoading(false); }
-    }, 350),
-    []
-  );
+        res = await mapService.photonSearch(q, null, null, 8);
+      } catch {
+        const nom = await mapService.nominatimSearch(q, 8);
+        res = nom.map((r) => ({
+          id:       r.place_id,
+          name:     (r.display_name || '').split(',')[0] || '',
+          display:  r.display_name || '',
+          lat:      parseFloat(r.lat),
+          lng:      parseFloat(r.lon),
+          category: r.class || 'address',
+        }));
+      }
+      setResults(res.slice(0, 8));
+      setOpen(res.length > 0);
+    } catch (err) {
+      console.error('Search error:', err);
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const debouncedSearch = useDebounce(performSearch, 350);
 
   const handleChange = (e) => {
     const val = e.target.value;
     setQuery(val);
-    search(val);
+    debouncedSearch(val);
   };
 
   const handleSelect = (result) => {
     const location = {
-      lat:     result.lat,
-      lng:     result.lng,
-      address: result.display || result.name,
-      name:    result.name,
+      lat:      result.lat,
+      lng:      result.lng,
+      address:  result.display || result.name,
+      name:     result.name,
       category: result.category,
     };
     setQuery(result.display || result.name);
@@ -111,7 +120,7 @@ const SearchBox = ({
         <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
       )}
       <div className="relative flex items-center">
-        <div className="absolute left-3 text-slate-400">
+        <div className="absolute left-3 text-slate-400 pointer-events-none">
           {icon || <Search className="w-4 h-4" />}
         </div>
         <input
@@ -121,40 +130,51 @@ const SearchBox = ({
           onChange={handleChange}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
-          className="w-full pl-10 pr-10 py-3 glass rounded-xl
-                     text-white placeholder-slate-500 text-sm
-                     border border-white/10 focus:border-primary-500/50
-                     focus:outline-none focus:ring-1 focus:ring-primary-500/30
+          autoComplete="off"
+          className="w-full pl-10 pr-10 py-3 rounded-xl text-sm
+                     text-white placeholder-slate-500
+                     border border-white/10
+                     focus:border-green-500/50 focus:outline-none
+                     focus:ring-1 focus:ring-green-500/30
                      transition-all"
+          style={{ background: 'rgba(30,41,59,0.8)' }}
         />
         <div className="absolute right-3 flex items-center gap-1">
           {loading && <Spinner size="sm" />}
           {query && !loading && (
-            <button onClick={handleClear} className="text-slate-400 hover:text-white transition-colors">
+            <button
+              onClick={handleClear}
+              type="button"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
               <X className="w-4 h-4" />
             </button>
           )}
         </div>
       </div>
 
-      {/* Dropdown */}
       {open && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 z-[9999]
-                        glass border border-white/10 rounded-xl shadow-2xl
-                        overflow-hidden animate-fade-in max-h-72 overflow-y-auto">
+        <div
+          className="absolute top-full left-0 right-0 mt-1 z-50
+                     border border-white/10 rounded-xl shadow-2xl
+                     overflow-hidden max-h-64 overflow-y-auto"
+          style={{ background: 'rgba(15,23,42,0.97)' }}
+        >
           {results.map((result, i) => (
             <button
-              key={`${result.id}_${i}`}
+              key={`${result.id || i}_${i}`}
               onClick={() => handleSelect(result)}
+              type="button"
               className="w-full flex items-start gap-3 px-4 py-3 text-left
-                         hover:bg-white/10 transition-colors border-b border-white/5 last:border-0"
+                         hover:bg-white/10 transition-colors
+                         border-b border-white/5 last:border-0"
             >
               <div className="mt-0.5 flex-shrink-0">
-                {getCategoryIcon(result.category)}
+                {getCategoryIcon(result.category || '')}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium text-white truncate">
-                  {result.name || result.display?.split(',')[0]}
+                  {result.name || (result.display || '').split(',')[0]}
                 </p>
                 {result.display && result.display !== result.name && (
                   <p className="text-xs text-slate-400 truncate mt-0.5">
@@ -164,7 +184,7 @@ const SearchBox = ({
               </div>
               {result.category && (
                 <span className="flex-shrink-0 text-xs text-slate-500 capitalize mt-0.5">
-                  {result.category.replace('_', ' ')}
+                  {(result.category || '').replace('_', ' ')}
                 </span>
               )}
             </button>

@@ -1,16 +1,24 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
-  "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options",        "value": "DENY"    },
-        { "key": "Referrer-Policy",        "value": "strict-origin-when-cross-origin" }
-      ]
-    }
-  ],
+  "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": "build",
-  "framework": "create-react-app"
+  "installCommand": "npm install",
+  "framework": "create-react-app",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-cache, no-store, must-revalidate" }
+      ]
+    }
+  ]
 }

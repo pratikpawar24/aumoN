@@ -1,5 +1,5 @@
-export const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000';
-export const AI_URL  = process.env.REACT_APP_AI_URL  || 'http://localhost:7860';
+export const API_URL = process.env.REACT_APP_API_URL || 'https://aumo-backend.onrender.com';
+export const AI_URL  = process.env.REACT_APP_AI_URL  || 'https://pratikpawar24-aumo-ai.hf.space';
 
 export const MAP_TILES = {
   osm:       'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
@@ -13,10 +13,10 @@ export const MAP_TILES = {
 export const MAP_ATTRIBUTIONS = {
   osm:       '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   satellite: '© <a href="https://www.esri.com">Esri</a>',
-  carto:     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, © <a href="https://carto.com/">CARTO</a>',
+  carto:     '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/">CARTO</a>',
 };
 
-export const DEFAULT_CENTER = [20.5937, 78.9629]; // India center
+export const DEFAULT_CENTER = [20.5937, 78.9629];
 export const DEFAULT_ZOOM   = 13;
 export const MIN_ZOOM = 3;
 export const MAX_ZOOM = 19;
@@ -31,10 +31,10 @@ export const VEHICLE_TYPES = [
 ];
 
 export const OPTIMIZE_OPTIONS = [
-  { value: 'carbon',   label: 'Eco Route',       icon: '🌿', color: '#22c55e', desc: 'Minimize CO₂ emissions' },
-  { value: 'time',     label: 'Fastest Route',   icon: '⚡', color: '#ef4444', desc: 'Minimize travel time'   },
-  { value: 'distance', label: 'Shortest Route',  icon: '📏', color: '#3b82f6', desc: 'Minimize distance'      },
-  { value: 'balanced', label: 'Balanced Route',  icon: '⚖️', color: '#f59e0b', desc: 'Balance all factors'    },
+  { value: 'carbon',   label: 'Eco Route',      icon: '🌿', color: '#22c55e', desc: 'Minimize CO₂' },
+  { value: 'time',     label: 'Fastest Route',  icon: '⚡', color: '#ef4444', desc: 'Minimize time' },
+  { value: 'distance', label: 'Shortest Route', icon: '📏', color: '#3b82f6', desc: 'Minimize distance' },
+  { value: 'balanced', label: 'Balanced',       icon: '⚖️', color: '#f59e0b', desc: 'Balance all' },
 ];
 
 export const ROUTE_COLORS = {
@@ -83,5 +83,10 @@ export const POI_CATEGORIES = {
 
 export const TOAST_OPTIONS = {
   duration: 4000,
-  style: { background: '#1e293b', color: '#e2e8f0', border: '1px solid #334155' },
+  style: {
+    background: '#1e293b',
+    color: '#e2e8f0',
+    border: '1px solid #334155',
+    borderRadius: '12px',
+  },
 };

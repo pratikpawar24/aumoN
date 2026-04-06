@@ -9,7 +9,6 @@ import Navbar                    from './components/Common/Navbar';
 import { FullPageLoader }        from './components/Common/Loading';
 import { TOAST_OPTIONS }         from './utils/constants';
 
-// Pages
 import Home          from './pages/Home';
 import MapPage       from './pages/MapPage';
 import CarpoolPage   from './pages/CarpoolPage';
@@ -33,21 +32,21 @@ const AppRoutes = () => {
     <>
       <Navbar />
       <Routes>
-        <Route path="/"         element={<Home />}          />
-        <Route path="/map"      element={<MapPage />}       />
-        <Route path="/about"    element={<AboutPage />}     />
-        <Route path="/login"    element={<Login />}         />
-        <Route path="/register" element={<Register />}      />
-        <Route path="/carpool"  element={
+        <Route path="/"          element={<Home />}         />
+        <Route path="/map"       element={<MapPage />}      />
+        <Route path="/about"     element={<AboutPage />}    />
+        <Route path="/login"     element={<Login />}        />
+        <Route path="/register"  element={<Register />}     />
+        <Route path="/carpool"   element={
           <ProtectedRoute><CarpoolPage /></ProtectedRoute>
         } />
         <Route path="/dashboard" element={
           <ProtectedRoute><DashboardPage /></ProtectedRoute>
         } />
-        <Route path="/profile"  element={
+        <Route path="/profile"   element={
           <ProtectedRoute><ProfilePage /></ProtectedRoute>
         } />
-        <Route path="*"         element={<Navigate to="/" replace />} />
+        <Route path="*"          element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

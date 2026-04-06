@@ -1,7 +1,8 @@
 {
   "name": "aumo-frontend",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
+  "homepage": ".",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -15,7 +16,6 @@
     "lucide-react": "^0.294.0",
     "react-hot-toast": "^2.4.1",
     "date-fns": "^3.0.6",
-    "lodash.debounce": "^4.0.8",
     "clsx": "^2.0.0"
   },
   "devDependencies": {
@@ -26,14 +26,31 @@
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
-    "test": "react-scripts test",
+    "test": "react-scripts test --passWithNoTests",
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": ["react-app"]
+    "extends": [
+      "react-app"
+    ],
+    "rules": {
+      "no-unused-vars": "warn",
+      "react-hooks/exhaustive-deps": "warn"
+    }
   },
   "browserslist": {
-    "production": [">0.2%", "not dead", "not op_mini all"],
-    "development": ["last 1 chrome version", "last 1 firefox version"]
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

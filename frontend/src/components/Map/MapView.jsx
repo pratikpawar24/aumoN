@@ -1,19 +1,20 @@
-import React, { useEffect, useCallback, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
   MapContainer, TileLayer, useMap, useMapEvents, ZoomControl
 } from 'react-leaflet';
 import { useMapContext } from '../../context/MapContext';
-import { MAP_TILES, MAP_ATTRIBUTIONS, DEFAULT_CENTER, DEFAULT_ZOOM } from '../../utils/constants';
-import RouteLayer    from './RouteLayer';
-import MarkerLayer   from './MarkerLayer';
-import POILayer      from './POILayer';
-import TrafficLayer  from './TrafficLayer';
+import {
+  MAP_TILES, MAP_ATTRIBUTIONS, DEFAULT_CENTER, DEFAULT_ZOOM
+} from '../../utils/constants';
+import RouteLayer   from './RouteLayer';
+import MarkerLayer  from './MarkerLayer';
+import POILayer     from './POILayer';
+import TrafficLayer from './TrafficLayer';
 import 'leaflet/dist/leaflet.css';
 
-// Inner component: sync map ref & events
 const MapController = ({ onMapClick }) => {
   const map = useMap();
-  const { mapRef, mapCenter, mapZoom } = useMapContext();
+  const { mapRef } = useMapContext();
 
   useEffect(() => {
     mapRef.current = map;
@@ -28,7 +29,7 @@ const MapController = ({ onMapClick }) => {
 
 const MapView = ({ onMapClick, className = '' }) => {
   const {
-    mapStyle, mapCenter, mapZoom,
+    mapStyle,
     currentRoute, alternatives,
     origin, destination,
     pois, busStops, buildings,
@@ -37,7 +38,7 @@ const MapView = ({ onMapClick, className = '' }) => {
     userLocation,
   } = useMapContext();
 
-  const tileUrl   = MAP_TILES[mapStyle]   || MAP_TILES.dark;
+  const tileUrl    = MAP_TILES[mapStyle]    || MAP_TILES.dark;
   const tileAttrib = mapStyle === 'satellite'
     ? MAP_ATTRIBUTIONS.satellite
     : MAP_ATTRIBUTIONS.carto;
@@ -45,22 +46,19 @@ const MapView = ({ onMapClick, className = '' }) => {
   return (
     <div className={`relative w-full h-full ${className}`}>
       <MapContainer
-        center={mapCenter}
-        zoom={mapZoom}
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
         zoomControl={false}
         style={{ width: '100%', height: '100%' }}
-        className="rounded-none"
       >
         <TileLayer url={tileUrl} attribution={tileAttrib} maxZoom={19} />
         <ZoomControl position="bottomright" />
         <MapController onMapClick={onMapClick} />
 
-        {/* Traffic overlay */}
         {showTraffic && trafficData && (
           <TrafficLayer data={trafficData} />
         )}
 
-        {/* POIs layer */}
         {showPOIs && (
           <POILayer
             pois={pois}
@@ -69,20 +67,14 @@ const MapView = ({ onMapClick, className = '' }) => {
           />
         )}
 
-        {/* Route layers */}
         {alternatives.map((alt, i) => (
-          <RouteLayer
-            key={`alt_${i}`}
-            route={alt}
-            isSelected={false}
-            isAlternative
-          />
+          <RouteLayer key={`alt_${i}`} route={alt} isSelected={false} isAlternative />
         ))}
+
         {currentRoute && (
           <RouteLayer route={currentRoute} isSelected />
         )}
 
-        {/* Markers */}
         <MarkerLayer
           origin={origin}
           destination={destination}
