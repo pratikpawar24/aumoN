@@ -1,15 +1,16 @@
 import React from 'react';
 import { Leaf, TrendingDown } from 'lucide-react';
-import { formatEmission, formatCO2Saved, getGreenScoreInfo } from '../../utils/helpers';
+import { formatEmission, getGreenScoreInfo } from '../../utils/helpers';
 
-const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0, size = 'md' }) => {
-  const info       = getGreenScoreInfo(score);
-  const radius     = 40;
+const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0 }) => {
+  const info         = getGreenScoreInfo(score);
+  const radius       = 40;
   const circumference = 2 * Math.PI * radius;
-  const offset     = circumference - (score / 100) * circumference;
+  const offset       = circumference - (score / 100) * circumference;
 
   return (
-    <div className="glass rounded-xl p-4 border border-white/10">
+    <div className="rounded-xl p-4 border border-white/10"
+         style={{ background: 'rgba(30,41,59,0.8)' }}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           {/* Score ring */}
@@ -29,7 +30,9 @@ const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0, size = 'md' }) =>
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className="text-lg font-bold text-white leading-none">{Math.round(score)}</span>
+              <span className="text-lg font-bold text-white leading-none">
+                {Math.round(score)}
+              </span>
               <span className="text-xs text-slate-400">/ 100</span>
             </div>
           </div>
@@ -41,8 +44,8 @@ const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0, size = 'md' }) =>
             </div>
             <p className="text-xs text-slate-400">Green Mobility Score</p>
             <div className="flex items-center gap-1 mt-1">
-              <Leaf className="w-3 h-3 text-primary-400" />
-              <span className="text-xs text-primary-400">
+              <Leaf className="w-3 h-3 text-green-400" />
+              <span className="text-xs text-green-400">
                 {formatEmission(emission)} CO₂
               </span>
             </div>
@@ -51,11 +54,11 @@ const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0, size = 'md' }) =>
 
         {co2Saved > 0 && (
           <div className="text-right">
-            <div className="flex items-center gap-1 text-primary-400 justify-end">
+            <div className="flex items-center gap-1 text-green-400 justify-end">
               <TrendingDown className="w-3 h-3" />
               <span className="text-xs font-medium">Saved</span>
             </div>
-            <p className="text-sm font-bold text-primary-400">
+            <p className="text-sm font-bold text-green-400">
               {formatEmission(co2Saved)}
             </p>
             <p className="text-xs text-slate-400">vs baseline</p>

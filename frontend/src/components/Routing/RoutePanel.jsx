@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
-import {
-  Navigation, Leaf, Zap, Ruler, Scale, Clock,
-  ChevronDown, ChevronUp, Locate
-} from 'lucide-react';
+import { Navigation, Leaf, ChevronDown, ChevronUp, Locate } from 'lucide-react';
 import SearchBox     from '../Map/SearchBox';
 import CarbonScore   from './CarbonScore';
 import RouteDetails  from './RouteDetails';
@@ -24,11 +21,11 @@ const RoutePanel = () => {
   const { calculateRoute, loading } = useRoute();
   const { flyTo, loadPOIs }         = useMap();
 
-  const [vehicleType,  setVehicleType]  = useState('car');
-  const [optimizeFor,  setOptimizeFor]  = useState('carbon');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-  const [departureTime, setDepartureTime] = useState('');
-  const [avoidCongestion, setAvoidCongestion] = useState(true);
+  const [vehicleType,    setVehicleType]    = useState('car');
+  const [optimizeFor,    setOptimizeFor]    = useState('carbon');
+  const [showAdvanced,   setShowAdvanced]   = useState(false);
+  const [departureTime,  setDepartureTime]  = useState('');
+  const [avoidCongestion,setAvoidCongestion]= useState(true);
 
   const handleOriginSelect = async (loc) => {
     if (!loc) { setOrigin(null); return; }
@@ -45,11 +42,12 @@ const RoutePanel = () => {
   const handleUseMyLocation = async () => {
     try {
       toast.loading('Getting your location...', { id: 'loc' });
-      const loc = await mapService.getUserLocation();
+      const loc  = await mapService.getUserLocation();
       const addr = await mapService.nominatimReverse(loc.lat, loc.lng);
       const location = {
         lat: loc.lat, lng: loc.lng,
-        address: addr?.display_name || `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`,
+        address: addr?.display_name ||
+          `${loc.lat.toFixed(4)}, ${loc.lng.toFixed(4)}`,
       };
       setOrigin(location);
       flyTo(loc.lat, loc.lng, 15);
@@ -84,7 +82,7 @@ const RoutePanel = () => {
 
         {/* Header */}
         <div className="flex items-center gap-2">
-          <Navigation className="w-5 h-5 text-primary-400" />
+          <Navigation className="w-5 h-5 text-green-400" />
           <h2 className="text-lg font-bold text-white">Plan Route</h2>
         </div>
 
@@ -97,25 +95,24 @@ const RoutePanel = () => {
                 placeholder="Origin — building, address..."
                 value={origin?.address || ''}
                 onSelect={handleOriginSelect}
-                icon={<div className="w-2.5 h-2.5 rounded-full bg-primary-500" />}
+                icon={<div className="w-2.5 h-2.5 rounded-full bg-green-500" />}
               />
             </div>
             <button
               onClick={handleUseMyLocation}
               title="Use my location"
-              className="mt-5 p-3 glass rounded-xl border border-white/10
-                         text-primary-400 hover:bg-primary-500/10 transition-colors"
+              className="mt-5 p-3 rounded-xl border border-white/10
+                         text-green-400 hover:text-green-300 transition-colors"
+              style={{ background: 'rgba(30,41,59,0.8)' }}
             >
               <Locate className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Swap button */}
           <div className="flex justify-center">
             <button
               onClick={handleSwap}
-              className="text-slate-400 hover:text-primary-400 text-xs transition-colors
-                         flex items-center gap-1"
+              className="text-slate-400 hover:text-green-400 text-xs transition-colors"
             >
               ⇅ Swap
             </button>
@@ -132,7 +129,9 @@ const RoutePanel = () => {
 
         {/* Vehicle type */}
         <div>
-          <label className="text-xs font-medium text-slate-400 mb-2 block">Vehicle</label>
+          <label className="text-xs font-medium text-slate-400 mb-2 block">
+            Vehicle
+          </label>
           <div className="grid grid-cols-3 gap-1.5">
             {VEHICLE_TYPES.map((v) => (
               <button
@@ -141,11 +140,16 @@ const RoutePanel = () => {
                 className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl
                             border text-xs font-medium transition-all
                             ${vehicleType === v.value
-                              ? 'bg-primary-500/20 border-primary-500 text-primary-400'
-                              : 'glass border-white/10 text-slate-400 hover:border-white/30'}`}
+                              ? 'border-green-500 text-green-400'
+                              : 'border-white/10 text-slate-400 hover:border-white/30'}`}
+                style={vehicleType === v.value
+                  ? { background: 'rgba(34,197,94,0.2)' }
+                  : { background: 'rgba(30,41,59,0.8)' }}
               >
                 <span className="text-base">{v.icon}</span>
-                <span className="leading-tight text-center">{v.label.split(' ')[0]}</span>
+                <span className="leading-tight text-center">
+                  {v.label.split(' ')[0]}
+                </span>
               </button>
             ))}
           </div>
@@ -153,7 +157,9 @@ const RoutePanel = () => {
 
         {/* Optimize for */}
         <div>
-          <label className="text-xs font-medium text-slate-400 mb-2 block">Optimize For</label>
+          <label className="text-xs font-medium text-slate-400 mb-2 block">
+            Optimize For
+          </label>
           <div className="grid grid-cols-2 gap-1.5">
             {OPTIMIZE_OPTIONS.map((opt) => (
               <button
@@ -162,11 +168,13 @@ const RoutePanel = () => {
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border
                             text-xs font-medium transition-all
                             ${optimizeFor === opt.value
-                              ? 'border-current text-white'
-                              : 'glass border-white/10 text-slate-400 hover:border-white/30'}`}
+                              ? 'text-white'
+                              : 'border-white/10 text-slate-400 hover:border-white/30'}`}
                 style={optimizeFor === opt.value
-                  ? { borderColor: opt.color, backgroundColor: `${opt.color}20`, color: opt.color }
-                  : {}}
+                  ? { borderColor: opt.color,
+                      backgroundColor: `${opt.color}20`,
+                      color: opt.color }
+                  : { background: 'rgba(30,41,59,0.8)' }}
               >
                 <span>{opt.icon}</span>
                 <span>{opt.label.split(' ')[0]}</span>
@@ -188,28 +196,36 @@ const RoutePanel = () => {
         </button>
 
         {showAdvanced && (
-          <div className="space-y-3 animate-fade-in">
+          <div className="space-y-3">
             <div>
-              <label className="text-xs text-slate-400 mb-1 block">Departure Time</label>
+              <label className="text-xs text-slate-400 mb-1 block">
+                Departure Time
+              </label>
               <input
                 type="time"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
-                className="w-full glass rounded-xl px-3 py-2.5 text-sm text-white
-                           border border-white/10 focus:border-primary-500/50 focus:outline-none"
+                className="w-full rounded-xl px-3 py-2.5 text-sm text-white
+                           border border-white/10 focus:border-green-500/50
+                           focus:outline-none"
+                style={{ background: 'rgba(30,41,59,0.8)' }}
               />
             </div>
             <label className="flex items-center gap-3 cursor-pointer">
               <div
                 onClick={() => setAvoidCongestion((p) => !p)}
-                className={`relative w-10 h-5 rounded-full transition-colors ${
-                  avoidCongestion ? 'bg-primary-500' : 'bg-slate-600'
-                }`}
+                className="relative w-10 h-5 rounded-full transition-colors cursor-pointer"
+                style={{ background: avoidCongestion ? '#22c55e' : '#475569' }}
               >
-                <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full
-                                 shadow transition-transform ${
-                  avoidCongestion ? 'translate-x-5' : 'translate-x-0.5'
-                }`} />
+                <div
+                  className="absolute top-0.5 w-4 h-4 bg-white rounded-full
+                               shadow transition-transform"
+                  style={{
+                    transform: avoidCongestion
+                      ? 'translateX(20px)'
+                      : 'translateX(2px)',
+                  }}
+                />
               </div>
               <span className="text-xs text-slate-300">Avoid congestion</span>
             </label>
@@ -220,11 +236,11 @@ const RoutePanel = () => {
         <button
           onClick={handleCalculate}
           disabled={loading || !origin || !destination}
-          className="w-full py-3.5 bg-primary-500 hover:bg-primary-600
+          className="w-full py-3.5 bg-green-500 hover:bg-green-600
                      disabled:opacity-50 disabled:cursor-not-allowed
                      text-white font-semibold rounded-xl transition-all
                      flex items-center justify-center gap-2
-                     shadow-lg shadow-primary-500/25"
+                     shadow-lg"
         >
           {loading ? (
             <><Spinner size="sm" color="white" />Calculating...</>
@@ -235,7 +251,7 @@ const RoutePanel = () => {
 
         {/* Results */}
         {currentRoute && (
-          <div className="space-y-3 animate-slide-up">
+          <div className="space-y-3">
             <CarbonScore
               score={currentRoute.green_score}
               co2Saved={currentRoute.carbon_saved_g}

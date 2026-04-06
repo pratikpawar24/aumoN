@@ -1,32 +1,32 @@
 import React, { useEffect, useState } from 'react';
 import { Users, Plus, Clock, CheckCircle, XCircle, Leaf } from 'lucide-react';
 import { useCarpool } from '../../hooks/useCarpool';
-import { useAuth }    from '../../hooks/useAuth';
 import RideRequest    from './RideRequest';
 import RideMatch      from './RideMatch';
 import RideHistory    from './RideHistory';
-import { formatDistance, formatEmission, formatRelativeTime } from '../../utils/helpers';
+import { formatRelativeTime } from '../../utils/helpers';
 import { Spinner } from '../Common/Loading';
 
 const STATUS_CONFIG = {
-  pending:   { color: '#f59e0b', icon: Clock,         label: 'Pending'   },
-  matching:  { color: '#3b82f6', icon: Clock,         label: 'Matching'  },
-  matched:   { color: '#22c55e', icon: CheckCircle,   label: 'Matched'   },
-  completed: { color: '#64748b', icon: CheckCircle,   label: 'Completed' },
-  cancelled: { color: '#ef4444', icon: XCircle,       label: 'Cancelled' },
+  pending:   { color: '#f59e0b', icon: Clock,       label: 'Pending'   },
+  matching:  { color: '#3b82f6', icon: Clock,       label: 'Matching'  },
+  matched:   { color: '#22c55e', icon: CheckCircle, label: 'Matched'   },
+  completed: { color: '#64748b', icon: CheckCircle, label: 'Completed' },
+  cancelled: { color: '#ef4444', icon: XCircle,     label: 'Cancelled' },
 };
 
 const CarpoolDashboard = () => {
-  const { user }     = useAuth();
   const { requests, loading, matchResult, loadMyRequests, cancelRequest } = useCarpool();
   const [activeTab,  setActiveTab]  = useState('requests');
   const [showCreate, setShowCreate] = useState(false);
 
-  useEffect(() => { loadMyRequests(); }, []);
+  useEffect(() => {
+    loadMyRequests();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const tabs = [
     { id: 'requests', label: 'My Requests', count: requests.length },
-    { id: 'history',  label: 'History'  },
+    { id: 'history',  label: 'History' },
   ];
 
   return (
@@ -35,7 +35,7 @@ const CarpoolDashboard = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary-400" />
+            <Users className="w-6 h-6 text-green-400" />
             Smart Carpool
           </h1>
           <p className="text-slate-400 text-sm mt-1">
@@ -44,9 +44,9 @@ const CarpoolDashboard = () => {
         </div>
         <button
           onClick={() => setShowCreate((p) => !p)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-primary-500
-                     hover:bg-primary-600 text-white rounded-xl font-medium
-                     transition-colors shadow-lg shadow-primary-500/25"
+          className="flex items-center gap-2 px-4 py-2.5 bg-green-500
+                     hover:bg-green-600 text-white rounded-xl font-medium
+                     transition-colors shadow-lg"
         >
           <Plus className="w-4 h-4" />
           New Request
@@ -66,14 +66,15 @@ const CarpoolDashboard = () => {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2 glass rounded-xl p-1">
+      <div className="flex gap-2 rounded-xl p-1"
+           style={{ background: 'rgba(30,41,59,0.8)' }}>
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
             className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all
                         ${activeTab === tab.id
-                          ? 'bg-primary-500 text-white shadow'
+                          ? 'bg-green-500 text-white shadow'
                           : 'text-slate-400 hover:text-white'}`}
           >
             {tab.label}
@@ -100,13 +101,16 @@ const CarpoolDashboard = () => {
           ) : (
             requests.map((req) => {
               const sc = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
-              const Icon = sc.icon;
               return (
-                <div key={req._id} className="glass rounded-xl border border-white/10 p-4">
+                <div key={req._id}
+                     className="rounded-xl border border-white/10 p-4"
+                     style={{ background: 'rgba(30,41,59,0.8)' }}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full" style={{ background: sc.color }} />
-                      <span className="text-sm font-medium" style={{ color: sc.color }}>
+                      <div className="w-2 h-2 rounded-full"
+                           style={{ background: sc.color }} />
+                      <span className="text-sm font-medium"
+                            style={{ color: sc.color }}>
                         {sc.label}
                       </span>
                     </div>
@@ -131,8 +135,9 @@ const CarpoolDashboard = () => {
                   </div>
 
                   {req.matchId && (
-                    <div className="flex items-center gap-1.5 text-xs text-primary-400
-                                    bg-primary-500/10 rounded-lg px-3 py-1.5 mb-3">
+                    <div className="flex items-center gap-1.5 text-xs text-green-400
+                                    rounded-lg px-3 py-1.5 mb-3"
+                         style={{ background: 'rgba(34,197,94,0.1)' }}>
                       <Leaf className="w-3 h-3" />
                       <span>Matched! Check your match for route details.</span>
                     </div>

@@ -4,12 +4,12 @@ import { useMapContext } from '../context/MapContext';
 import toast from 'react-hot-toast';
 
 export const useRoute = () => {
-  const { setCurrentRoute, setAlternatives, origin, destination } = useMapContext();
-  const [loading,      setLoading]      = useState(false);
-  const [error,        setError]        = useState(null);
-  const [routeResult,  setRouteResult]  = useState(null);
-  const [rideHistory,  setRideHistory]  = useState([]);
-  const [favorites,    setFavorites]    = useState([]);
+  const { setCurrentRoute, setAlternatives } = useMapContext();
+  const [loading,        setLoading]        = useState(false);
+  const [error,          setError]          = useState(null);
+  const [routeResult,    setRouteResult]    = useState(null);
+  const [rideHistory,    setRideHistory]    = useState([]);
+  const [favorites,      setFavorites]      = useState([]);
   const [historyLoading, setHistoryLoading] = useState(false);
 
   const calculateRoute = useCallback(async (orig, dest, options = {}) => {
@@ -27,7 +27,10 @@ export const useRoute = () => {
         setRouteResult(result);
         const co2 = result.primary_route.carbon_saved_g;
         if (co2 > 0) {
-          toast.success(`🌿 Route found! Saving ${Math.round(co2)}g CO₂`, { duration: 3000 });
+          toast.success(
+            `🌿 Route found! Saving ${Math.round(co2)}g CO₂`,
+            { duration: 3000 }
+          );
         } else {
           toast.success('Route calculated!');
         }
@@ -61,7 +64,9 @@ export const useRoute = () => {
     try {
       const data = await routeService.getFavorites();
       setFavorites(data.routes || []);
-    } catch {}
+    } catch (err) {
+      console.error('Favorites error:', err);
+    }
   }, []);
 
   const saveFavorite = useCallback(async (routeData) => {

@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { Polyline, useMap } from 'react-leaflet';
-import L from 'leaflet';
 import { getRouteStyle, fitMapToRoute } from '../../utils/mapUtils';
 
 const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
@@ -12,7 +11,7 @@ const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
   const latLngs = geometry
     .map((pt) => {
       if (Array.isArray(pt)) return [pt[0], pt[1]];
-      if (pt?.lat !== undefined) return [pt.lat, pt.lng];
+      if (pt && pt.lat !== undefined) return [pt.lat, pt.lng];
       return null;
     })
     .filter(Boolean);
@@ -21,7 +20,7 @@ const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
     if (isSelected && latLngs.length >= 2) {
       fitMapToRoute(map, latLngs);
     }
-  }, [isSelected, geometry.length, map]);
+  }, [isSelected, map]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (latLngs.length < 2) return null;
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell
+  Tooltip, ResponsiveContainer, PieChart, Pie, Cell
 } from 'recharts';
 import api from '../../services/api';
 import { formatEmission } from '../../utils/helpers';
@@ -9,7 +9,8 @@ import { Leaf, TrendingDown, Car, TreePine } from 'lucide-react';
 import { SkeletonCard } from '../Common/Loading';
 
 const StatCard = ({ icon: Icon, label, value, sub, color = '#22c55e' }) => (
-  <div className="glass rounded-xl p-4 border border-white/10">
+  <div className="rounded-xl p-4 border border-white/10"
+       style={{ background: 'rgba(30,41,59,0.8)' }}>
     <div className="flex items-center gap-3">
       <div className="w-10 h-10 rounded-xl flex items-center justify-center"
            style={{ background: `${color}20` }}>
@@ -34,22 +35,15 @@ const EmissionStats = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      try {
-        const res = await api.get('/api/emissions/stats');
-        setStats(res.data.stats);
-      } catch (err) {
-        console.error('Stats fetch error:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchStats();
+    api.get('/api/emissions/stats')
+      .then((res) => setStats(res.data.stats))
+      .catch((err) => console.error('Stats fetch error:', err))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return (
     <div className="space-y-4">
-      {[1,2,3].map(i => <SkeletonCard key={i} />)}
+      {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
     </div>
   );
 
@@ -62,7 +56,7 @@ const EmissionStats = () => {
   );
 
   const monthlyData = (stats.monthly || []).map((m) => ({
-    month: m.month,
+    month:   m.month,
     emitted: Math.round((m.emitted || 0) / 1000),
     saved:   Math.round((m.saved   || 0) / 1000),
     trips:   m.trips || 0,
@@ -102,7 +96,8 @@ const EmissionStats = () => {
 
       {/* Monthly chart */}
       {monthlyData.length > 0 && (
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="rounded-xl p-4 border border-white/10"
+             style={{ background: 'rgba(30,41,59,0.8)' }}>
           <h3 className="text-sm font-semibold text-white mb-4">Monthly CO₂ (kg)</h3>
           <ResponsiveContainer width="100%" height={180}>
             <AreaChart data={monthlyData}>
@@ -120,14 +115,18 @@ const EmissionStats = () => {
               <XAxis dataKey="month" tick={{ fill: '#64748b', fontSize: 11 }} />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} />
               <Tooltip
-                contentStyle={{ background: '#1e293b', border: '1px solid #334155',
-                                borderRadius: '8px', fontSize: '12px' }}
+                contentStyle={{
+                  background: '#1e293b', border: '1px solid #334155',
+                  borderRadius: '8px', fontSize: '12px',
+                }}
                 labelStyle={{ color: '#e2e8f0' }}
               />
-              <Area type="monotone" dataKey="saved" stroke="#22c55e"
-                    fill="url(#savedGrad)" name="CO₂ Saved (kg)" strokeWidth={2} />
-              <Area type="monotone" dataKey="emitted" stroke="#ef4444"
-                    fill="url(#emittedGrad)" name="CO₂ Emitted (kg)" strokeWidth={2} />
+              <Area type="monotone" dataKey="saved"
+                    stroke="#22c55e" fill="url(#savedGrad)"
+                    name="CO₂ Saved (kg)" strokeWidth={2} />
+              <Area type="monotone" dataKey="emitted"
+                    stroke="#ef4444" fill="url(#emittedGrad)"
+                    name="CO₂ Emitted (kg)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -135,12 +134,14 @@ const EmissionStats = () => {
 
       {/* Vehicle breakdown */}
       {vehicleData.length > 0 && (
-        <div className="glass rounded-xl p-4 border border-white/10">
+        <div className="rounded-xl p-4 border border-white/10"
+             style={{ background: 'rgba(30,41,59,0.8)' }}>
           <h3 className="text-sm font-semibold text-white mb-4">Trips by Vehicle</h3>
           <div className="flex items-center gap-6">
             <PieChart width={120} height={120}>
-              <Pie data={vehicleData} cx={55} cy={55} innerRadius={30}
-                   outerRadius={50} dataKey="value" paddingAngle={3}>
+              <Pie data={vehicleData} cx={55} cy={55}
+                   innerRadius={30} outerRadius={50}
+                   dataKey="value" paddingAngle={3}>
                 {vehicleData.map((entry, i) => (
                   <Cell key={i} fill={entry.color} />
                 ))}
@@ -148,9 +149,11 @@ const EmissionStats = () => {
             </PieChart>
             <div className="flex-1 space-y-2">
               {vehicleData.map((v) => (
-                <div key={v.name} className="flex items-center justify-between text-xs">
+                <div key={v.name}
+                     className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ background: v.color }} />
+                    <div className="w-2 h-2 rounded-full"
+                         style={{ background: v.color }} />
                     <span className="text-slate-300 capitalize">{v.name}</span>
                   </div>
                   <span className="text-white font-medium">{v.value} trips</span>

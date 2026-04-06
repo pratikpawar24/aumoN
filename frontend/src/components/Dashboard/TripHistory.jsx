@@ -1,16 +1,23 @@
 import React, { useEffect } from 'react';
 import { useRoute } from '../../hooks/useRoute';
-import { formatDistance, formatDuration, formatEmission,
-         formatRelativeTime, getVehicleIcon } from '../../utils/helpers';
+import {
+  formatDistance, formatDuration, formatEmission,
+  formatRelativeTime, getVehicleIcon
+} from '../../utils/helpers';
 import { Leaf, MapPin, Clock } from 'lucide-react';
-import { SkeletonCard, Spinner } from '../Common/Loading';
+import { SkeletonCard } from '../Common/Loading';
 
 const TripHistory = () => {
   const { rideHistory, historyLoading, loadHistory } = useRoute();
-  useEffect(() => { loadHistory(); }, []);
+
+  useEffect(() => {
+    loadHistory();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (historyLoading) return (
-    <div className="space-y-3">{[1,2,3].map(i => <SkeletonCard key={i} />)}</div>
+    <div className="space-y-3">
+      {[1, 2, 3].map((i) => <SkeletonCard key={i} />)}
+    </div>
   );
 
   if (!rideHistory.length) return (
@@ -24,20 +31,27 @@ const TripHistory = () => {
   return (
     <div className="space-y-3">
       {rideHistory.map((ride) => (
-        <div key={ride._id} className="glass rounded-xl border border-white/10 p-4">
+        <div key={ride._id}
+             className="rounded-xl border border-white/10 p-4"
+             style={{ background: 'rgba(30,41,59,0.8)' }}>
           <div className="flex items-start justify-between mb-2">
             <div className="flex items-center gap-2">
               <span className="text-lg">{getVehicleIcon(ride.vehicleType)}</span>
               <div>
-                <p className="text-xs text-slate-400">{formatRelativeTime(ride.createdAt)}</p>
+                <p className="text-xs text-slate-400">
+                  {formatRelativeTime(ride.createdAt)}
+                </p>
                 {ride.isCarpooled && (
-                  <span className="text-xs text-purple-400 bg-purple-500/10
-                                   px-2 py-0.5 rounded-full">Carpool</span>
+                  <span className="text-xs text-purple-400"
+                        style={{ background: 'rgba(139,92,246,0.1)',
+                                 padding: '1px 8px', borderRadius: '999px' }}>
+                    Carpool
+                  </span>
                 )}
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm font-semibold text-primary-400">
+              <p className="text-sm font-semibold text-green-400">
                 Score: {Math.round(ride.greenScore || 50)}
               </p>
             </div>
@@ -56,14 +70,18 @@ const TripHistory = () => {
 
           <div className="flex gap-4 text-xs text-slate-400">
             <span className="flex items-center gap-1">
-              <MapPin className="w-3 h-3" />{formatDistance(ride.distanceKm)}
+              <MapPin className="w-3 h-3" />
+              {formatDistance(ride.distanceKm)}
             </span>
             <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />{formatDuration(ride.timeMinutes)}
+              <Clock className="w-3 h-3" />
+              {formatDuration(ride.timeMinutes)}
             </span>
-            <span className="flex items-center gap-1 ml-auto text-primary-400">
+            <span className="flex items-center gap-1 ml-auto text-green-400">
               <Leaf className="w-3 h-3" />
-              {ride.co2Saved > 0 ? `Saved ${formatEmission(ride.co2Saved)}` : formatEmission(ride.co2Emissions)}
+              {ride.co2Saved > 0
+                ? `Saved ${formatEmission(ride.co2Saved)}`
+                : formatEmission(ride.co2Emissions)}
             </span>
           </div>
         </div>
