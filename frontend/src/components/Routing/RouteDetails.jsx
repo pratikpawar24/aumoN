@@ -32,7 +32,11 @@ const RouteDetails = ({ route }) => {
   // Surface routing-quality so users know when the polyline isn't a real
   // road route (AI service unreachable, OSRM rate-limited, etc.).
   const isStraightLine = fallback === true || algorithm === 'straight_line_estimate';
-  const isOSRMFallback = fallback === 'osrm' || algorithm === 'osrm_fallback' || algorithm === 'ors_fallback';
+  const isOSRMFallback =
+    fallback === 'osrm' ||
+    algorithm === 'osrm_fallback' ||
+    algorithm === 'osrm_alternatives' ||
+    algorithm === 'ors_fallback';
 
   const handleSaveFavorite = () => {
     saveFavorite({
@@ -87,7 +91,7 @@ const RouteDetails = ({ route }) => {
       )}
       {isOSRMFallback && !isStraightLine && (
         <div className="px-4 py-2 bg-blue-500/10 border-t border-blue-500/30 text-xs text-blue-400">
-          ℹ️ Using fallback router (eco/fastest/shortest will look the same). Bring the AI service online for profile-aware routing.
+          ℹ️ Using fallback router with route alternatives. For richer carbon-aware routing, deploy the AI service.
         </div>
       )}
 
