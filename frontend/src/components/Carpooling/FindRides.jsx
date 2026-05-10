@@ -1,10 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, MapPin, Clock, IndianRupee, Users, MessageSquare, Locate } from 'lucide-react';
+import { Search, Clock, IndianRupee, Users, MessageSquare, Locate } from 'lucide-react';
 import SearchBox from '../Map/SearchBox';
 import { Spinner } from '../Common/Loading';
 import { useCarpool } from '../../hooks/useCarpool';
 import mapService from '../../services/mapService';
-import { formatRelativeTime } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
 const SORT_OPTIONS = [

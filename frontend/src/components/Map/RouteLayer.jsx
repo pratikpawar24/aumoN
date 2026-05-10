@@ -37,14 +37,13 @@ const buildCongestionSegments = (latLngs, samples) => {
 const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
   const map = useMap();
 
-  const geometry = route?.route_geometry || route?.routeGeometry || [];
   const profile  = route?.profile || 'balanced';
   const trafficSamples = route?.traffic_along_route;
 
-  const latLngs = useMemo(
-    () => geometry.map(toLatLng).filter(Boolean),
-    [geometry]
-  );
+  const latLngs = useMemo(() => {
+    const geometry = route?.route_geometry || route?.routeGeometry || [];
+    return geometry.map(toLatLng).filter(Boolean);
+  }, [route?.route_geometry, route?.routeGeometry]);
 
   useEffect(() => {
     if (isSelected && latLngs.length >= 2) {
