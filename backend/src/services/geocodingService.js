@@ -94,7 +94,13 @@ class GeocodingService {
       const res = await axios.post(
         OVERPASS_URL,
         `data=${encodeURIComponent(query)}`,
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 30000 }
+        { headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+          },
+          timeout: 30000,
+        }
       );
       return this._parsePOIs(res.data.elements || []);
     } catch (err) {
@@ -119,7 +125,13 @@ class GeocodingService {
       const res = await axios.post(
         OVERPASS_URL,
         `data=${encodeURIComponent(query)}`,
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 20000 }
+        { headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+          },
+          timeout: 20000,
+        }
       );
       return (res.data.elements || [])
         .filter((el) => el.tags?.name)
@@ -156,7 +168,13 @@ class GeocodingService {
       const res = await axios.post(
         OVERPASS_URL,
         `data=${encodeURIComponent(query)}`,
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 20000 }
+        { headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+          },
+          timeout: 20000,
+        }
       );
       return (res.data.elements || [])
         .filter((el) => el.tags?.name)
@@ -191,7 +209,13 @@ class GeocodingService {
       const res = await axios.post(
         OVERPASS_URL,
         `data=${encodeURIComponent(query)}`,
-        { headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, timeout: 20000 }
+        { headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'Accept': 'application/json',
+            'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+          },
+          timeout: 20000,
+        }
       );
       return (res.data.elements || [])
         .filter((el) => el.tags?.name)

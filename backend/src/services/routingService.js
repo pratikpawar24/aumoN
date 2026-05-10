@@ -44,7 +44,16 @@ class RoutingService {
           steps: true,
           annotations: false,
         },
-        timeout: 15000,
+        // The public OSRM demo started enforcing User-Agent — without it
+        // requests come back as opaque errors. Also set Accept explicitly.
+        headers: {
+          'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+          'Accept': 'application/json',
+        },
+        timeout: 20000,
+        // Treat anything 2xx as success so we surface real upstream errors
+        // instead of getting a cryptic empty err.message.
+        validateStatus: (s) => s >= 200 && s < 300,
       });
 
       if (!res.data.routes || res.data.routes.length === 0) {
@@ -93,9 +102,66 @@ class RoutingService {
         source: 'osrm_fallback',
       };
     } catch (err) {
-      console.error('OSRM error:', err.message);
-      // Last resort: straight-line estimate
+      // Better diagnostics so the Render logs actually tell you why OSRM
+      // dropped to a straight line.
+      const status = err.response?.status;
+      const body = err.response?.data;
+      console.error(
+        'OSRM error:',
+        err.message || '(no message)',
+        status ? `[HTTP ${status}]` : '',
+        body && typeof body === 'string' ? body.slice(0, 200) : ''
+      );
+
+      // Try OpenRouteService as a second fallback if a key is configured.
+      if (config.orsApiKey) {
+        const ors = await this._convertORSToRoute(origin, destination, options);
+        if (ors) return ors;
+      }
+
+      // Last resort: straight-line estimate.
       return this._straightLineEstimate(origin, destination, options);
+    }
+  }
+
+  // ── ORS-style route, converted to our internal shape ──────────────────────
+  async _convertORSToRoute(origin, destination, options = {}) {
+    try {
+      const data = await this.getORSRoute(origin, destination, options.vehicleType);
+      if (!data?.features?.[0]) return null;
+      const feat = data.features[0];
+      const coords = feat.geometry.coordinates.map((c) => [c[1], c[0]]);
+      const summary = feat.properties.summary || {};
+      const distanceKm = (summary.distance || 0) / 1000;
+      const timeMinutes = (summary.duration || 0) / 60;
+      const vehicleType = options.vehicleType || 'car';
+      const ef = this._getEmissionFactor(vehicleType);
+      const co2 = distanceKm * ef;
+      const baseline = distanceKm * 150;
+
+      return {
+        primary_route: {
+          route_geometry: coords,
+          total_distance_km: Math.round(distanceKm * 100) / 100,
+          total_time_minutes: Math.round(timeMinutes * 10) / 10,
+          total_emissions_g: Math.round(co2),
+          carbon_saved_g: Math.round(Math.max(0, baseline - co2)),
+          baseline_emission_g: Math.round(baseline),
+          green_score: 50,
+          instructions: [],
+          label: 'ORS Route',
+          color: '#3b82f6',
+          profile: options.optimizeFor || 'balanced',
+          vehicle_type: vehicleType,
+          algorithm: 'ors_fallback',
+        },
+        alternatives: [],
+        modal_comparison: this._modalComparison(distanceKm, timeMinutes),
+        source: 'ors_fallback',
+      };
+    } catch (e) {
+      console.error('ORS conversion error:', e.message);
+      return null;
     }
   }
 

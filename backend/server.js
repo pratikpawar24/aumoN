@@ -50,6 +50,11 @@ io.on('connection', (socket) => {
 // Make io accessible in controllers
 app.set('io', io);
 
+// Render (and most PaaS hosts) put a reverse proxy in front. Without
+// trust proxy set, express-rate-limit refuses to use X-Forwarded-For and
+// throws ERR_ERL_UNEXPECTED_X_FORWARDED_FOR every request.
+app.set('trust proxy', 1);
+
 // ── Core Middleware ──────────────────────────────────────────────────────────
 app.use(helmet({
   crossOriginResourcePolicy: { policy: 'cross-origin' },
