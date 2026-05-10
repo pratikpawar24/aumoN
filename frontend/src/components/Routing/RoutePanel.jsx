@@ -20,7 +20,7 @@ const RoutePanel = () => {
     destination, setDestination,
     currentRoute, alternatives,
   } = useMapContext();
-  const { calculateRoute, loading } = useRoute();
+  const { calculateRoute, calculateBoth, loading } = useRoute();
   const { flyTo, loadPOIs }         = useMap();
   const { setUserLocation } = useMapContext();
 
@@ -80,7 +80,7 @@ const RoutePanel = () => {
       toast.error('Please enter both origin and destination');
       return;
     }
-    await calculateRoute(origin, destination, {
+    await calculateBoth(origin, destination, {
       vehicleType, optimizeFor,
       departureTime: departureTime || null,
       avoidCongestion,
@@ -230,10 +230,10 @@ const RoutePanel = () => {
                 key={opt.value}
                 onClick={() => {
                   setOptimizeFor(opt.value);
-                  // Auto-recalculate when changing modes after a route
-                  // is already on screen.
+                  // Auto-recalculate the selected mode + its pair when
+                  // changing modes after a route is already on screen.
                   if (origin && destination && currentRoute) {
-                    calculateRoute(origin, destination, {
+                    calculateBoth(origin, destination, {
                       vehicleType, optimizeFor: opt.value,
                       departureTime: departureTime || null,
                       avoidCongestion,

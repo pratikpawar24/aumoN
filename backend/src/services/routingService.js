@@ -156,6 +156,11 @@ class RoutingService {
       const ef = this._getEmissionFactor(vehicleType);
       const co2 = distanceKm * ef;
       const baseline = distanceKm * 150;
+      const co2Saved = Math.max(0, baseline - co2);
+      const savingsPct = baseline > 0
+        ? (co2Saved / baseline) * 100
+        : (vehicleType === 'bike' || vehicleType === 'walk' ? 100 : 0);
+      const greenScore = Math.max(0, Math.min(100, savingsPct));
 
       return {
         primary_route: {
@@ -163,9 +168,10 @@ class RoutingService {
           total_distance_km: Math.round(distanceKm * 100) / 100,
           total_time_minutes: Math.round(timeMinutes * 10) / 10,
           total_emissions_g: Math.round(co2),
-          carbon_saved_g: Math.round(Math.max(0, baseline - co2)),
+          carbon_saved_g: Math.round(co2Saved),
           baseline_emission_g: Math.round(baseline),
-          green_score: 50,
+          co2_savings_percent: Math.round(savingsPct * 10) / 10,
+          green_score: Math.round(greenScore * 10) / 10,
           instructions: [],
           label: 'ORS Route',
           color: '#3b82f6',
@@ -375,6 +381,11 @@ class RoutingService {
     const ef = this._getEmissionFactor(vehicleType);
     const emission = distanceKm * ef;
     const baseline = distanceKm * 150;
+    const co2Saved = Math.max(0, baseline - emission);
+    const savingsPct = baseline > 0
+      ? (co2Saved / baseline) * 100
+      : (vehicleType === 'bike' || vehicleType === 'walk' ? 100 : 0);
+    const greenScore = Math.max(0, Math.min(100, savingsPct));
 
     return {
       primary_route: {
@@ -382,9 +393,10 @@ class RoutingService {
         total_distance_km: Math.round(distanceKm * 100) / 100,
         total_time_minutes: Math.round(timeMin * 10) / 10,
         total_emissions_g: Math.round(emission),
-        carbon_saved_g: Math.round(Math.max(0, baseline - emission)),
+        carbon_saved_g: Math.round(co2Saved),
         baseline_emission_g: Math.round(baseline),
-        green_score: 50,
+        co2_savings_percent: Math.round(savingsPct * 10) / 10,
+        green_score: Math.round(greenScore * 10) / 10,
         instructions: [],
         label: 'Estimated Route',
         color: '#6b7280',

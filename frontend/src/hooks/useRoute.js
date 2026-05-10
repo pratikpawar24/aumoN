@@ -3,8 +3,17 @@ import routeService from '../services/routeService';
 import { useMapContext } from '../context/MapContext';
 import toast from 'react-hot-toast';
 
+// Map of complementary optimization modes. Each mode is paired with the
+// one users most likely want to compare against side-by-side.
+export const PROFILE_PAIR = {
+  carbon: 'time',
+  time: 'carbon',
+  distance: 'balanced',
+  balanced: 'distance',
+};
+
 export const useRoute = () => {
-  const { setCurrentRoute, setAlternatives, setTrafficData } = useMapContext();
+  const { setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData } = useMapContext();
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
   const [routeResult,    setRouteResult]    = useState(null);
@@ -58,6 +67,60 @@ export const useRoute = () => {
     }
   }, [setCurrentRoute, setAlternatives, setTrafficData]);
 
+  // Calculate the selected mode + its pair in parallel. The selected one
+  // becomes currentRoute (drawn solid); the pair becomes pairedRoute
+  // (drawn dotted). Used by the mode buttons so users always see their
+  // chosen mode plus its complementary mode for visual comparison.
+  const calculateBoth = useCallback(async (orig, dest, options = {}) => {
+    if (!orig || !dest) {
+      toast.error('Please set both origin and destination');
+      return null;
+    }
+    const primaryMode = options.optimizeFor || 'carbon';
+    const pairMode = PROFILE_PAIR[primaryMode] || 'time';
+    setLoading(true);
+    setError(null);
+    try {
+      const [primary, paired] = await Promise.all([
+        routeService.calculateRoute(orig, dest, { ...options, optimizeFor: primaryMode })
+          .catch((e) => { throw e; }),
+        // Don't fail the whole call if the pair fails — primary is what
+        // matters; paired is purely a comparison hint.
+        routeService.calculateRoute(orig, dest, { ...options, optimizeFor: pairMode, saveRoute: false })
+          .catch((e) => null),
+      ]);
+
+      if (primary?.primary_route) {
+        setCurrentRoute(primary.primary_route);
+        setAlternatives(primary.alternatives || []);
+        setRouteResult(primary);
+        if (primary.traffic_overlay?.length) {
+          setTrafficData({ segments: primary.traffic_overlay });
+        }
+        const co2 = primary.primary_route.carbon_saved_g;
+        if (co2 > 0) {
+          toast.success(`🌿 Route found! Saving ${Math.round(co2)}g CO₂`, { duration: 2500 });
+        } else {
+          toast.success('Route calculated!');
+        }
+      }
+      setPairedRoute(paired?.primary_route || null);
+      return primary;
+    } catch (err) {
+      const data = err.response?.data;
+      const msg = data?.message || 'Failed to calculate route';
+      setError(msg);
+      if (data?.code === 'DISTANCE_TOO_FAR') {
+        toast(msg, { icon: '🌍', duration: 6000 });
+      } else {
+        toast.error(msg);
+      }
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData]);
+
   const loadHistory = useCallback(async (page = 1, filters = {}) => {
     setHistoryLoading(true);
     try {
@@ -99,6 +162,7 @@ export const useRoute = () => {
     favorites,
     historyLoading,
     calculateRoute,
+    calculateBoth,
     loadHistory,
     loadFavorites,
     saveFavorite,

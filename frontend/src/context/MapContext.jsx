@@ -10,6 +10,11 @@ export const MapProvider = ({ children }) => {
   const [origin, setOrigin]             = useState(null);
   const [destination, setDestination]   = useState(null);
   const [currentRoute, setCurrentRoute] = useState(null);
+  // The "paired" route — same OD, different optimization mode. Drawn on
+  // the map as a dotted line so the user can compare the selected mode
+  // with its complementary mode at a glance.
+  // Pair table: carbon ↔ time, distance ↔ balanced.
+  const [pairedRoute, setPairedRoute]   = useState(null);
   const [alternatives, setAlternatives] = useState([]);
   const [pois, setPois]                 = useState([]);
   const [busStops, setBusStops]         = useState([]);
@@ -32,6 +37,7 @@ export const MapProvider = ({ children }) => {
 
   const clearRoute = useCallback(() => {
     setCurrentRoute(null);
+    setPairedRoute(null);
     setAlternatives([]);
   }, []);
 
@@ -39,6 +45,7 @@ export const MapProvider = ({ children }) => {
     setOrigin(null);
     setDestination(null);
     setCurrentRoute(null);
+    setPairedRoute(null);
     setAlternatives([]);
   }, []);
 
@@ -52,6 +59,7 @@ export const MapProvider = ({ children }) => {
         origin, setOrigin,
         destination, setDestination,
         currentRoute, setCurrentRoute,
+        pairedRoute, setPairedRoute,
         alternatives, setAlternatives,
         pois, setPois,
         busStops, setBusStops,

@@ -70,7 +70,7 @@ const MapController = ({ onMapClick }) => {
 const MapView = ({ onMapClick, className = '' }) => {
   const {
     mapStyle,
-    currentRoute,
+    currentRoute, pairedRoute,
     origin, destination,
     pois, busStops, buildings,
     showPOIs, showBusStops, showBuildings,
@@ -107,9 +107,12 @@ const MapView = ({ onMapClick, className = '' }) => {
           />
         )}
 
-        {/* Only the currently-selected route is drawn on the map.
-            Alternatives appear in the side panel; clicking one moves it
-            into currentRoute and replaces what's drawn here. */}
+        {/* Two routes drawn at a time: the selected mode (solid) and its
+            paired complementary mode (dotted) for at-a-glance comparison.
+            Pair table: carbon ↔ time, distance ↔ balanced. */}
+        {pairedRoute && (
+          <RouteLayer route={pairedRoute} isSelected={false} isAlternative />
+        )}
         {currentRoute && (
           <RouteLayer route={currentRoute} isSelected />
         )}
