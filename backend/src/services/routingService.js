@@ -55,9 +55,33 @@ class RoutingService {
   async getOSRMRoute(origin, destination, options = {}) {
     try {
       const profile = this._osrmProfile(options.vehicleType);
+      const optimizeFor = options.optimizeFor || 'carbon';
       const path = `/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
       let lastError = null;
       let res = null;
+
+      // Profile-specific OSRM parameters. The big lever is `exclude` —
+      // OSRM honours `exclude=motorway` to skip highways entirely, which
+      // forces a non-highway path. That single flag is what makes "eco"
+      // produce a genuinely different polyline from "fastest" even when
+      // alternatives=3 returns only one route.
+      const profileParams = (() => {
+        switch (optimizeFor) {
+          case 'carbon':
+            // No highways → local roads / surface streets.
+            return { alternatives: 3, exclude: 'motorway' };
+          case 'distance':
+            // Standard graph; we'll pick the shortest alt afterwards.
+            return { alternatives: 3 };
+          case 'time':
+            // Default profile, no exclusions, fastest by duration.
+            return { alternatives: 3 };
+          case 'balanced':
+          default:
+            // Default; we'll pick the middle alternative afterwards.
+            return { alternatives: 3 };
+        }
+      })();
 
       for (const base of OSRM_MIRRORS) {
         if (base.includes('routed-car') && profile !== 'car') continue;
@@ -69,9 +93,7 @@ class RoutingService {
               geometries: 'geojson',
               steps: true,
               annotations: false,
-              // Ask for alternatives. The number is best-effort; some mirrors
-              // ignore "alternatives.max_paths" but accept the boolean.
-              alternatives: 3,
+              ...profileParams,
             },
             headers: {
               'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
@@ -89,6 +111,36 @@ class RoutingService {
             `OSRM ${base} failed: ${err.message || ''}${status ? ` [HTTP ${status}]` : ''}`
           );
           continue;
+        }
+      }
+
+      // If eco's exclude=motorway returned nothing (e.g. the only path
+      // between origin and destination IS a motorway), retry once without
+      // the exclusion so the user still gets a route — just not an
+      // optimal "eco" one.
+      if ((!res || !res.data?.routes?.length) && profileParams.exclude) {
+        for (const base of OSRM_MIRRORS) {
+          if (base.includes('routed-car') && profile !== 'car') continue;
+          try {
+            res = await axios.get(`${base}${path}`, {
+              params: {
+                overview: 'full',
+                geometries: 'geojson',
+                steps: true,
+                annotations: false,
+                alternatives: 3,
+              },
+              headers: {
+                'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+                'Accept': 'application/json',
+              },
+              timeout: 10000,
+              validateStatus: (s) => s >= 200 && s < 300,
+            });
+            if (res.data?.routes?.length) break;
+          } catch (e) {
+            continue;
+          }
         }
       }
 

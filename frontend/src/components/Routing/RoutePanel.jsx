@@ -5,6 +5,7 @@ import CarbonScore   from './CarbonScore';
 import RouteDetails  from './RouteDetails';
 import AlternativeRoutes from './AlternativeRoutes';
 import StartTripButton from './StartTripButton';
+import TripSummary from './TripSummary';
 import { useMapContext } from '../../context/MapContext';
 import { useRoute }      from '../../hooks/useRoute';
 import { useMap }        from '../../hooks/useMap';
@@ -31,6 +32,7 @@ const RoutePanel = () => {
   const [avoidCongestion,setAvoidCongestion]= useState(true);
   const [tripStarting, setTripStarting] = useState(false);
   const [weather, setWeather] = useState(null);
+  const [tripSummary, setTripSummary] = useState(null);
 
   const handleReroute = useCallback(async () => {
     if (!origin || !destination) return;
@@ -130,8 +132,12 @@ const RoutePanel = () => {
 
   const handleStopTrip = async () => {
     try {
-      await tracker.endTrip();
-      toast.success('Trip ended');
+      const finishedTrip = await tracker.endTrip();
+      if (finishedTrip) {
+        setTripSummary(finishedTrip);
+      } else {
+        toast.success('Trip ended');
+      }
     } catch (err) {
       toast.error('Could not end trip');
     }
@@ -365,6 +371,10 @@ const RoutePanel = () => {
           </div>
         )}
       </div>
+
+      {tripSummary && (
+        <TripSummary trip={tripSummary} onClose={() => setTripSummary(null)} />
+      )}
     </div>
   );
 };

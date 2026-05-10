@@ -83,6 +83,18 @@ const RouteDetails = ({ route }) => {
         ))}
       </div>
 
+      {/* ETA — local clock-time when leaving now */}
+      {time > 0 && (
+        <div className="px-4 py-2 border-t border-white/10 flex items-center justify-between text-xs">
+          <span className="text-slate-400">Arriving</span>
+          <span className="text-white font-medium">
+            ~{new Date(Date.now() + time * 60_000).toLocaleTimeString([], {
+              hour: '2-digit', minute: '2-digit',
+            })}
+          </span>
+        </div>
+      )}
+
       {/* Routing-quality notice */}
       {isStraightLine && (
         <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/30 text-xs text-amber-500">
