@@ -42,9 +42,16 @@ export const useRoute = () => {
       }
       return result;
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to calculate route';
+      const data = err.response?.data;
+      const msg = data?.message || 'Failed to calculate route';
       setError(msg);
-      toast.error(msg);
+      // DISTANCE_TOO_FAR is a UX message, not an error — show it longer
+      // and as a regular toast instead of red.
+      if (data?.code === 'DISTANCE_TOO_FAR') {
+        toast(msg, { icon: '🌍', duration: 6000 });
+      } else {
+        toast.error(msg);
+      }
       return null;
     } finally {
       setLoading(false);

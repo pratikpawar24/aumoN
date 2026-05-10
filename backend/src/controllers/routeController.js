@@ -4,6 +4,26 @@ const Route = require('../models/Route');
 const routingService = require('../services/routingService');
 const carbonService = require('../services/carbonService');
 
+// Per-mode max sensible distances. Beyond these, we don't even attempt
+// a road route — physical reality (open ocean, missing road networks)
+// makes it impossible. The frontend gets a clear error instead of a
+// silently-drawn straight line.
+const MAX_DISTANCE_KM = {
+  car: 2500, electric: 2500, motorcycle: 2000, bus: 1500,
+  bike: 200, walk: 50,
+};
+
+const haversineKm = (a, b) => {
+  const R = 6371;
+  const toRad = (x) => (x * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const s =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+};
+
 exports.calculateRoute = async (req, res, next) => {
   try {
     const {
@@ -11,6 +31,19 @@ exports.calculateRoute = async (req, res, next) => {
       optimizeFor = 'carbon', departureTime,
       avoidCongestion = true, saveRoute = true,
     } = req.body;
+
+    // Sanity-check: reject obviously-impossible destinations up front.
+    const straightKm = haversineKm(origin, destination);
+    const maxKm = MAX_DISTANCE_KM[vehicleType] ?? 2500;
+    if (straightKm > maxKm) {
+      return res.status(422).json({
+        success: false,
+        message: `That's ${Math.round(straightKm).toLocaleString()} km in a straight line — too far for a road route by ${vehicleType}. Try a destination within ${maxKm.toLocaleString()} km.`,
+        code: 'DISTANCE_TOO_FAR',
+        straightLineKm: Math.round(straightKm),
+        maxKm,
+      });
+    }
 
     const result = await routingService.getOptimizedRoute(origin, destination, {
       vehicleType, optimizeFor, departureTime, avoidCongestion,

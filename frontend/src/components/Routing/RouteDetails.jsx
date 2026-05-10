@@ -25,7 +25,14 @@ const RouteDetails = ({ route }) => {
     label,
     color,
     instructions = [],
+    fallback,
+    algorithm,
   } = route;
+
+  // Surface routing-quality so users know when the polyline isn't a real
+  // road route (AI service unreachable, OSRM rate-limited, etc.).
+  const isStraightLine = fallback === true || algorithm === 'straight_line_estimate';
+  const isOSRMFallback = fallback === 'osrm' || algorithm === 'osrm_fallback' || algorithm === 'ors_fallback';
 
   const handleSaveFavorite = () => {
     saveFavorite({
@@ -71,6 +78,18 @@ const RouteDetails = ({ route }) => {
           </div>
         ))}
       </div>
+
+      {/* Routing-quality notice */}
+      {isStraightLine && (
+        <div className="px-4 py-2 bg-amber-500/10 border-t border-amber-500/30 text-xs text-amber-500">
+          ⚠️ No road route found. This is a straight-line estimate; distance and CO₂ are approximate.
+        </div>
+      )}
+      {isOSRMFallback && !isStraightLine && (
+        <div className="px-4 py-2 bg-blue-500/10 border-t border-blue-500/30 text-xs text-blue-400">
+          ℹ️ Using fallback router (eco/fastest/shortest will look the same). Bring the AI service online for profile-aware routing.
+        </div>
+      )}
 
       {/* CO2 saved badge */}
       {saved > 0 && (
