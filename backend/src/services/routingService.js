@@ -142,8 +142,8 @@ class RoutingService {
         throw lastError || new Error('No OSRM mirror returned a route');
       }
 
-      const optimizeFor = options.optimizeFor || 'carbon';
-      const vehicleType = options.vehicleType || 'car';
+      // optimizeFor + vehicleType are already declared above at the
+      // top of getOSRMRoute — don't shadow them here.
       const allRoutes = res.data.routes;
       const picked = this._pickAlternativeForProfile(allRoutes, optimizeFor);
       const primary = this._osrmRouteToShape(picked.route, vehicleType, optimizeFor, picked.label);
