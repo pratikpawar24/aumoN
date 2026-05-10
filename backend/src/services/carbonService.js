@@ -28,7 +28,10 @@ class CarbonService {
       co2Emitted: rideData.co2Emissions || 0,
       co2Saved: rideData.co2Saved || 0,
       baselineEmission: rideData.baselineEmission || 0,
-      greenScore: rideData.greenScore || 50,
+      // ?? not || — a legitimate score of 0 (no savings) was being
+      // silently rewritten to 50 because of the falsy-OR fallback,
+      // contributing to the "stuck at 50" reports.
+      greenScore: rideData.greenScore ?? 0,
       vehicleType: rideData.vehicleType || 'car',
       distance: rideData.distanceKm || 0,
       optimizeFor: rideData.optimizeFor || 'carbon',
@@ -46,13 +49,13 @@ class CarbonService {
     const logs = await EmissionLog.find({ userId }).sort({ date: -1 }).limit(365);
 
     if (!logs.length) {
-      return { totalEmitted: 0, totalSaved: 0, avgGreenScore: 50, tripCount: 0 };
+      return { totalEmitted: 0, totalSaved: 0, avgGreenScore: 0, tripCount: 0 };
     }
 
     const totalEmitted = logs.reduce((s, l) => s + (l.co2Emitted || 0), 0);
     const totalSaved = logs.reduce((s, l) => s + (l.co2Saved || 0), 0);
     const avgGreenScore = Math.round(
-      logs.reduce((s, l) => s + (l.greenScore || 50), 0) / logs.length
+      logs.reduce((s, l) => s + (l.greenScore ?? 0), 0) / logs.length
     );
 
     // Monthly breakdown (last 6 months)

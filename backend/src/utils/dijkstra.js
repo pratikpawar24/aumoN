@@ -59,7 +59,10 @@ const dijkstra = (graph, source, target, vehicleType = 'car', alpha = 0.4, beta 
   const totalEm    = emGrams[target] || 0;
   const baseline   = totalDist * 150;
   const saved      = Math.max(0, baseline - totalEm);
-  const greenScore = baseline > 0 ? Math.min(100, (saved / baseline) * 100 + 50) : 50;
+  // Honest 0-100: 100 = zero emissions, 0 = at-or-above baseline.
+  // Old formula was (saved/baseline)*100 + 50, which floored at 50.
+  const savingsPct = baseline > 0 ? (saved / baseline) * 100 : 0;
+  const greenScore = Math.max(0, Math.min(100, savingsPct));
 
   return {
     path,

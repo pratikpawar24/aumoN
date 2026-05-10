@@ -140,7 +140,8 @@ class CarpoolMatchingService {
       co2SavedG: Math.round(co2Saved),
       savingsPercent: savingsPct,
       perPassengerEmissionG: Math.round(emissionG / n),
-      greenScore: Math.min(100, 50 + savingsPct / 2),
+      // Honest 0-100 score from savings %, no +50 floor.
+      greenScore: Math.round(Math.max(0, Math.min(100, savingsPct))),
       status: 'confirmed',
     });
 

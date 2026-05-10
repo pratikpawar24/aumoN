@@ -3,6 +3,7 @@ const EmissionLog = require('../models/EmissionLog');
 const Route = require('../models/Route');
 const routingService = require('../services/routingService');
 const carbonService = require('../services/carbonService');
+const tollService = require('../services/tollService');
 
 // Per-mode max sensible distances. Beyond these, we don't even attempt
 // a road route — physical reality (open ocean, missing road networks)
@@ -50,6 +51,21 @@ exports.calculateRoute = async (req, res, next) => {
     });
 
     const primary = result.primary_route;
+
+    // Toll-cost estimate via TollGuru (free 5k/month). When configured we
+    // get authoritative per-toll-booth INR pricing; otherwise the response
+    // already has the heuristic `may_have_tolls` flag from routingService.
+    if (primary?.route_geometry && tollService.isConfigured() && !avoidTolls) {
+      try {
+        const toll = await tollService.estimateForRoute(primary.route_geometry, vehicleType);
+        if (toll) {
+          primary.toll_estimate = toll;
+          primary.may_have_tolls = toll.hasTolls;
+        }
+      } catch (e) {
+        console.warn('TollGuru estimate skipped:', e.message);
+      }
+    }
 
     // Save ride to DB if user is authenticated
     if (req.user && saveRoute) {

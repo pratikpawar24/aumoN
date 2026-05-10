@@ -28,6 +28,7 @@ const RouteDetails = ({ route }) => {
     fallback,
     algorithm,
     may_have_tolls: mayHaveTolls,
+    toll_estimate: tollEstimate,
   } = route;
 
   // Surface routing-quality so users know when the polyline isn't a real
@@ -96,10 +97,27 @@ const RouteDetails = ({ route }) => {
         </div>
       )}
 
-      {/* Heuristic toll badge — based on whether the route uses
-          highway/expressway-class roads. Not authoritative; OSRM doesn't
-          expose toll metadata, so this is a best-effort hint. */}
-      {mayHaveTolls && (
+      {/* Toll cost — authoritative when TollGuru is configured, otherwise
+          a heuristic warning based on highway-class detection. */}
+      {tollEstimate && tollEstimate.hasTolls ? (
+        <div className="px-4 py-2 border-t border-amber-500/30 bg-amber-500/10 text-xs text-amber-400">
+          <div className="flex items-center justify-between font-medium">
+            <span className="flex items-center gap-1.5">💰 Toll cost</span>
+            <span className="text-white font-semibold">
+              ≈ ₹{tollEstimate.costInr}
+              <span className="text-amber-400/70 ml-1 font-normal">
+                · {tollEstimate.count} toll{tollEstimate.count === 1 ? '' : 's'}
+              </span>
+            </span>
+          </div>
+          {tollEstimate.tolls?.length > 0 && (
+            <div className="mt-1 text-[11px] text-amber-300/80 truncate">
+              {tollEstimate.tolls.slice(0, 3).map((t) => t.name).join(' · ')}
+              {tollEstimate.tolls.length > 3 && ` +${tollEstimate.tolls.length - 3} more`}
+            </div>
+          )}
+        </div>
+      ) : mayHaveTolls && (
         <div className="px-4 py-2 border-t border-amber-500/30 bg-amber-500/10 flex items-center gap-2 text-xs text-amber-400">
           <span>💰</span>
           <span>May include toll roads. Toggle "Avoid tolls" in Advanced Options to bypass.</span>

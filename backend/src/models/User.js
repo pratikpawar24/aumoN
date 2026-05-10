@@ -173,10 +173,13 @@ userSchema.methods.updateGreenMetrics = async function (tripData) {
   this.totalCO2Emitted += tripData.co2Emitted || 0;
   this.totalCO2Saved += tripData.co2Saved || 0;
 
-  // Recalculate green score as rolling average
-  const savingsRatio =
-    this.totalCO2Saved / (this.totalCO2Emitted + this.totalCO2Saved + 1);
-  this.greenScore = Math.round(Math.min(100, 50 + savingsRatio * 50));
+  // Honest 0-100 score: lifetime savings ratio against the baseline
+  // (saved + emitted). A user who never saves anything gets 0; one
+  // who emits zero gets 100. The previous formula `50 + ratio * 50`
+  // floored everyone at 50.
+  const total = this.totalCO2Emitted + this.totalCO2Saved;
+  const ratio = total > 0 ? this.totalCO2Saved / total : 0;
+  this.greenScore = Math.round(Math.max(0, Math.min(100, ratio * 100)));
 
   await this.save();
 };

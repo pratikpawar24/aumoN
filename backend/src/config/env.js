@@ -25,6 +25,7 @@ const optional = [
   'ADMIN_NAME',
   // Phase 7
   'OPENWEATHER_API_KEY',
+  'TOLLGURU_API_KEY',
 ];
 
 const validateEnv = () => {
@@ -73,6 +74,7 @@ const config = {
   adminName: process.env.ADMIN_NAME || 'AumoN Master Admin',
 
   openWeatherApiKey: process.env.OPENWEATHER_API_KEY || '',
+  tollGuruApiKey: process.env.TOLLGURU_API_KEY || '',
 };
 
 module.exports = { validateEnv, config };
