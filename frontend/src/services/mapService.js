@@ -70,18 +70,55 @@ const mapService = {
   },
 
   // ── Photon autocomplete ───────────────────────────────────────────────────
-  photonSearch: async (query, lat = null, lng = null, limit = 8) => {
+  // Returns a richer result list so apartments, roads, building names,
+  // landmarks, and addresses all surface usefully. Properties Photon
+  // exposes per result: name, street, housenumber, postcode, city, state,
+  // country, district, county, type ("street", "house", "place", "POI"...).
+  photonSearch: async (query, lat = null, lng = null, limit = 12) => {
     const params = { q: query, limit };
     if (lat && lng) { params.lat = lat; params.lon = lng; }
     const res = await axios.get(`${PHOTON}/api`, { params, timeout: 5000 });
-    return (res.data.features || []).map((f) => ({
-      id:       f.properties.osm_id,
-      name:     f.properties.name || f.properties.street || '',
-      display:  [f.properties.name, f.properties.city, f.properties.country].filter(Boolean).join(', '),
-      lat:      f.geometry.coordinates[1],
-      lng:      f.geometry.coordinates[0],
-      category: f.properties.type || 'place',
-    }));
+    return (res.data.features || []).map((f) => {
+      const p = f.properties || {};
+      // Build a primary name: prefer the OSM name; fall back to street +
+      // housenumber, then street alone, then the OSM key.
+      const primary =
+        p.name ||
+        [p.housenumber, p.street].filter(Boolean).join(' ') ||
+        p.street ||
+        p.osm_value ||
+        '';
+      // Build a "context" line (everything after the primary): district,
+      // city, state, country — joined for clarity.
+      const context = [
+        p.suburb,
+        p.district,
+        p.city,
+        p.state,
+        p.country,
+      ]
+        .filter(Boolean)
+        .filter((s, i, arr) => arr.indexOf(s) === i)  // dedupe
+        .join(', ');
+
+      return {
+        id:       f.properties.osm_id,
+        name:     primary,
+        display:  context ? `${primary} — ${context}` : primary,
+        lat:      f.geometry.coordinates[1],
+        lng:      f.geometry.coordinates[0],
+        category: p.osm_value || p.type || 'place',
+        // Pass through useful raw fields so the SearchBox can render
+        // distinct icons for streets vs apartments vs amenities.
+        raw: {
+          street: p.street,
+          housenumber: p.housenumber,
+          city: p.city,
+          osm_key: p.osm_key,
+          osm_value: p.osm_value,
+        },
+      };
+    });
   },
 
   // ── User location ─────────────────────────────────────────────────────────

@@ -70,15 +70,16 @@ export const GREEN_SCORE_LABELS = [
 
 export const POI_CATEGORIES = {
   bus_stop:   { icon: '🚌', color: '#f59e0b', label: 'Bus Stop'    },
-  food_drink: { icon: '🍽️', color: '#ef4444', label: 'Food & Drink' },
-  health:     { icon: '🏥', color: '#3b82f6', label: 'Health'       },
-  education:  { icon: '🎓', color: '#8b5cf6', label: 'Education'    },
-  finance:    { icon: '🏦', color: '#06b6d4', label: 'Finance'      },
-  tourism:    { icon: '🏛️', color: '#ec4899', label: 'Tourism'      },
-  office:     { icon: '🏢', color: '#64748b', label: 'Office'       },
-  leisure:    { icon: '🌳', color: '#22c55e', label: 'Leisure'      },
-  building:   { icon: '🏗️', color: '#94a3b8', label: 'Building'     },
-  shop:       { icon: '🛍️', color: '#f97316', label: 'Shop'         },
+  food_drink: { icon: '🍽️', color: '#ef4444', label: 'Restaurant'  },
+  health:     { icon: '🏥', color: '#3b82f6', label: 'Hospital'    },
+  education:  { icon: '🎓', color: '#8b5cf6', label: 'School'      },
+  finance:    { icon: '🏦', color: '#06b6d4', label: 'Bank'        },
+  tourism:    { icon: '🏨', color: '#ec4899', label: 'Hotel'       },
+  automotive: { icon: '⛽', color: '#eab308', label: 'Petrol Pump' },
+  office:     { icon: '🏢', color: '#64748b', label: 'Office'      },
+  leisure:    { icon: '🌳', color: '#22c55e', label: 'Leisure'     },
+  building:   { icon: '🏗️', color: '#94a3b8', label: 'Building'    },
+  shop:       { icon: '🛍️', color: '#f97316', label: 'Shop'        },
 };
 
 export const TOAST_OPTIONS = {

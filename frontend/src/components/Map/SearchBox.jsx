@@ -1,13 +1,25 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, X, MapPin, Bus, Building2, ShoppingBag } from 'lucide-react';
+import { Search, X, MapPin, Bus, Building2, ShoppingBag,
+         Hospital, GraduationCap, Hotel, UtensilsCrossed, Fuel,
+         Home, Route } from 'lucide-react';
 import mapService from '../../services/mapService';
 import { Spinner } from '../Common/Loading';
 
 const CATEGORY_ICONS = {
-  bus_stop: <Bus       className="w-3 h-3 text-yellow-400" />,
-  building: <Building2 className="w-3 h-3 text-blue-400"  />,
-  shop:     <ShoppingBag className="w-3 h-3 text-orange-400" />,
-  default:  <MapPin    className="w-3 h-3 text-slate-400"  />,
+  bus_stop:    <Bus              className="w-3 h-3 text-yellow-400" />,
+  building:    <Building2        className="w-3 h-3 text-blue-400"   />,
+  apartment:   <Building2        className="w-3 h-3 text-blue-400"   />,
+  house:       <Home             className="w-3 h-3 text-emerald-400"/>,
+  street:      <Route            className="w-3 h-3 text-slate-300"  />,
+  hospital:    <Hospital         className="w-3 h-3 text-blue-400"   />,
+  school:      <GraduationCap    className="w-3 h-3 text-purple-400" />,
+  university:  <GraduationCap    className="w-3 h-3 text-purple-400" />,
+  hotel:       <Hotel            className="w-3 h-3 text-pink-400"   />,
+  restaurant:  <UtensilsCrossed  className="w-3 h-3 text-red-400"    />,
+  cafe:        <UtensilsCrossed  className="w-3 h-3 text-amber-400"  />,
+  fuel:        <Fuel             className="w-3 h-3 text-yellow-500" />,
+  shop:        <ShoppingBag      className="w-3 h-3 text-orange-400" />,
+  default:     <MapPin           className="w-3 h-3 text-slate-400"  />,
 };
 
 const useDebounce = (fn, delay) => {
@@ -108,9 +120,22 @@ const SearchBox = ({
   };
 
   const getCategoryIcon = (cat = '') => {
-    if (cat.includes('bus') || cat === 'bus_stop') return CATEGORY_ICONS.bus_stop;
-    if (cat.includes('building') || cat.includes('office')) return CATEGORY_ICONS.building;
-    if (cat.includes('shop') || cat.includes('store')) return CATEGORY_ICONS.shop;
+    const c = cat.toLowerCase();
+    // Direct hits first
+    if (CATEGORY_ICONS[c]) return CATEGORY_ICONS[c];
+    if (c.includes('bus'))                                 return CATEGORY_ICONS.bus_stop;
+    if (c.includes('hospital') || c.includes('clinic'))    return CATEGORY_ICONS.hospital;
+    if (c.includes('school') || c.includes('college'))     return CATEGORY_ICONS.school;
+    if (c.includes('hotel') || c.includes('hostel'))       return CATEGORY_ICONS.hotel;
+    if (c.includes('restaurant') || c.includes('cafe') ||
+        c.includes('fast_food') || c.includes('bar'))      return CATEGORY_ICONS.restaurant;
+    if (c.includes('fuel') || c.includes('petrol'))        return CATEGORY_ICONS.fuel;
+    if (c.includes('apartments') || c.includes('residential')) return CATEGORY_ICONS.apartment;
+    if (c.includes('house'))                               return CATEGORY_ICONS.house;
+    if (c.includes('street') || c.includes('road') ||
+        c.includes('highway'))                             return CATEGORY_ICONS.street;
+    if (c.includes('building') || c.includes('office'))    return CATEGORY_ICONS.building;
+    if (c.includes('shop') || c.includes('store'))         return CATEGORY_ICONS.shop;
     return CATEGORY_ICONS.default;
   };
 
