@@ -27,6 +27,7 @@ const RouteDetails = ({ route }) => {
     instructions = [],
     fallback,
     algorithm,
+    may_have_tolls: mayHaveTolls,
   } = route;
 
   // Surface routing-quality so users know when the polyline isn't a real
@@ -92,6 +93,16 @@ const RouteDetails = ({ route }) => {
               hour: '2-digit', minute: '2-digit',
             })}
           </span>
+        </div>
+      )}
+
+      {/* Heuristic toll badge — based on whether the route uses
+          highway/expressway-class roads. Not authoritative; OSRM doesn't
+          expose toll metadata, so this is a best-effort hint. */}
+      {mayHaveTolls && (
+        <div className="px-4 py-2 border-t border-amber-500/30 bg-amber-500/10 flex items-center gap-2 text-xs text-amber-400">
+          <span>💰</span>
+          <span>May include toll roads. Toggle "Avoid tolls" in Advanced Options to bypass.</span>
         </div>
       )}
 

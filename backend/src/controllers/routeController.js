@@ -29,7 +29,7 @@ exports.calculateRoute = async (req, res, next) => {
     const {
       origin, destination, vehicleType = 'car',
       optimizeFor = 'carbon', departureTime,
-      avoidCongestion = true, saveRoute = true,
+      avoidCongestion = true, avoidTolls = false, saveRoute = true,
     } = req.body;
 
     // Sanity-check: reject obviously-impossible destinations up front.
@@ -46,7 +46,7 @@ exports.calculateRoute = async (req, res, next) => {
     }
 
     const result = await routingService.getOptimizedRoute(origin, destination, {
-      vehicleType, optimizeFor, departureTime, avoidCongestion,
+      vehicleType, optimizeFor, departureTime, avoidCongestion, avoidTolls,
     });
 
     const primary = result.primary_route;

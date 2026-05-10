@@ -30,6 +30,7 @@ const RoutePanel = () => {
   const [showAdvanced,   setShowAdvanced]   = useState(false);
   const [departureTime,  setDepartureTime]  = useState('');
   const [avoidCongestion,setAvoidCongestion]= useState(true);
+  const [avoidTolls,     setAvoidTolls]     = useState(false);
   const [tripStarting, setTripStarting] = useState(false);
   const [weather, setWeather] = useState(null);
   const [tripSummary, setTripSummary] = useState(null);
@@ -41,6 +42,7 @@ const RoutePanel = () => {
       vehicleType, optimizeFor,
       departureTime: departureTime || null,
       avoidCongestion,
+      avoidTolls,
     });
   }, [origin, destination, vehicleType, optimizeFor, departureTime, avoidCongestion, calculateRoute]);
 
@@ -86,6 +88,7 @@ const RoutePanel = () => {
       vehicleType, optimizeFor,
       departureTime: departureTime || null,
       avoidCongestion,
+      avoidTolls,
     });
     // Fetch weather at origin for context. Silently null when not configured.
     try {
@@ -309,6 +312,23 @@ const RoutePanel = () => {
                 />
               </div>
               <span className="text-xs text-slate-300">Avoid congestion</span>
+            </label>
+
+            <label className="flex items-center gap-3 cursor-pointer">
+              <div
+                onClick={() => setAvoidTolls((p) => !p)}
+                className="relative w-10 h-5 rounded-full transition-colors cursor-pointer"
+                style={{ background: avoidTolls ? '#22c55e' : '#475569' }}
+              >
+                <div
+                  className="absolute top-0.5 w-4 h-4 bg-white rounded-full
+                               shadow transition-transform"
+                  style={{
+                    transform: avoidTolls ? 'translateX(20px)' : 'translateX(2px)',
+                  }}
+                />
+              </div>
+              <span className="text-xs text-slate-300">Avoid toll roads</span>
             </label>
           </div>
         )}

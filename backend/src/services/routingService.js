@@ -56,32 +56,26 @@ class RoutingService {
     try {
       const profile = this._osrmProfile(options.vehicleType);
       const optimizeFor = options.optimizeFor || 'carbon';
+      const vehicleType = options.vehicleType || 'car';
+      const avoidTolls = !!options.avoidTolls;
       const path = `/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
       let lastError = null;
       let res = null;
 
-      // Profile-specific OSRM parameters. The big lever is `exclude` —
-      // OSRM honours `exclude=motorway` to skip highways entirely, which
-      // forces a non-highway path. That single flag is what makes "eco"
-      // produce a genuinely different polyline from "fastest" even when
-      // alternatives=3 returns only one route.
-      const profileParams = (() => {
-        switch (optimizeFor) {
-          case 'carbon':
-            // No highways → local roads / surface streets.
-            return { alternatives: 3, exclude: 'motorway' };
-          case 'distance':
-            // Standard graph; we'll pick the shortest alt afterwards.
-            return { alternatives: 3 };
-          case 'time':
-            // Default profile, no exclusions, fastest by duration.
-            return { alternatives: 3 };
-          case 'balanced':
-          default:
-            // Default; we'll pick the middle alternative afterwards.
-            return { alternatives: 3 };
-        }
-      })();
+      // Build the OSRM `exclude` list from three orthogonal sources:
+      //   1. optimizeFor — eco wants no motorways
+      //   2. vehicleType — buses in India don't use motorways
+      //   3. avoidTolls  — explicit user toggle
+      // OSRM accepts a comma-separated list.
+      const excludes = new Set();
+      if (optimizeFor === 'carbon') excludes.add('motorway');
+      if (vehicleType === 'bus')    excludes.add('motorway');
+      if (avoidTolls)               excludes.add('toll');
+
+      const profileParams = {
+        alternatives: 3,
+        ...(excludes.size > 0 ? { exclude: [...excludes].join(',') } : {}),
+      };
 
       for (const base of OSRM_MIRRORS) {
         if (base.includes('routed-car') && profile !== 'car') continue;
@@ -361,13 +355,27 @@ class RoutingService {
     const savingsPct = baseline > 0 ? (co2Saved / baseline) * 100 : 0;
 
     const geometry = (route.geometry?.coordinates || []).map((c) => [c[1], c[0]]);
-    const instructions = (route.legs?.[0]?.steps || []).map((s, i) => ({
+    const steps = route.legs?.[0]?.steps || [];
+    const instructions = steps.map((s, i) => ({
       step: i + 1,
       instruction: `${s.maneuver?.type || 'continue'} on ${s.name || 'unnamed road'}`,
       distance_m: Math.round(s.distance ?? 0),
       duration_s: Math.round(s.duration ?? 0),
       type: s.maneuver?.type,
     }));
+
+    // Heuristic toll detection: OSRM doesn't expose toll metadata in the
+    // public demo response, so we infer from step properties. Most highways
+    // in India have tolls; if the route uses motorway-class roads for a
+    // significant chunk (>10% of total distance), flag it.
+    const motorwayMeters = steps.reduce((acc, s) => {
+      const ref = (s.ref || '').toString();
+      const cls = (s.driving_side === 'right' && ref.match(/^(NH|SH|AH|NE|E)\d/i)) ? 1 : 0;
+      // Heuristic: refs like NH-48, NE-1 are typical Indian highway/expressway names.
+      return acc + (cls ? (s.distance ?? 0) : 0);
+    }, 0);
+    const totalMeters = (route.distance ?? 0);
+    const usesHighway = totalMeters > 0 && motorwayMeters / totalMeters > 0.10;
 
     return {
       route_geometry: geometry,
@@ -384,6 +392,8 @@ class RoutingService {
       profile,
       vehicle_type: vehicleType,
       algorithm: 'osrm_alternatives',
+      uses_highway: usesHighway,
+      may_have_tolls: usesHighway,
     };
   }
 

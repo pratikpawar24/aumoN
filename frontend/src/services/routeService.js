@@ -9,6 +9,7 @@ const routeService = {
       optimizeFor:    options.optimizeFor    || 'carbon',
       departureTime:  options.departureTime  || null,
       avoidCongestion:options.avoidCongestion !== false,
+      avoidTolls:     !!options.avoidTolls,
       saveRoute:      options.saveRoute      !== false,
     });
     return res.data;
