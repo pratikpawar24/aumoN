@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MapProvider }           from './context/MapContext';
@@ -19,13 +19,19 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import Login         from './components/Auth/Login';
 import Register      from './components/Auth/Register';
 
+import AdminLayout      from './components/Admin/AdminLayout';
+import AdminOverview    from './pages/admin/AdminOverview';
+import AdminUsers       from './pages/admin/AdminUsers';
+import AdminUserDetail  from './pages/admin/AdminUserDetail';
+import AdminAdmins      from './pages/admin/AdminAdmins';
+import AdminActivity    from './pages/admin/AdminActivity';
+
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <FullPageLoader />;
   return isAuthenticated ? children : <Navigate to="/login" replace />;
 };
 
-// Carpool requires both authentication AND a verified email.
 const VerifiedRoute = ({ children }) => {
   const { isAuthenticated, emailVerified, loading } = useAuth();
   if (loading) return <FullPageLoader />;
@@ -34,13 +40,35 @@ const VerifiedRoute = ({ children }) => {
   return children;
 };
 
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, isAdmin, loading } = useAuth();
+  if (loading) return <FullPageLoader />;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (!isAdmin) return <Navigate to="/" replace />;
+  return children;
+};
+
+const MasterAdminRoute = ({ children }) => {
+  const { isMasterAdmin, loading } = useAuth();
+  if (loading) return <FullPageLoader />;
+  if (!isMasterAdmin) return <Navigate to="/admin" replace />;
+  return children;
+};
+
+const ConditionalNavbar = () => {
+  const location = useLocation();
+  // Admin console has its own chrome — hide the user-facing navbar there.
+  if (location.pathname.startsWith('/admin')) return null;
+  return <Navbar />;
+};
+
 const AppRoutes = () => {
   const { loading } = useAuth();
   if (loading) return <FullPageLoader />;
 
   return (
     <>
-      <Navbar />
+      <ConditionalNavbar />
       <Routes>
         <Route path="/"          element={<Home />}         />
         <Route path="/map"       element={<MapPage />}      />
@@ -59,7 +87,17 @@ const AppRoutes = () => {
         <Route path="/profile"   element={
           <ProtectedRoute><ProfilePage /></ProtectedRoute>
         } />
-        <Route path="*"          element={<Navigate to="/" replace />} />
+
+        {/* Admin console — separate layout, separate chrome */}
+        <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
+          <Route index           element={<AdminOverview />} />
+          <Route path="users"    element={<AdminUsers />} />
+          <Route path="users/:id" element={<AdminUserDetail />} />
+          <Route path="admins"   element={<MasterAdminRoute><AdminAdmins /></MasterAdminRoute>} />
+          <Route path="activity" element={<MasterAdminRoute><AdminActivity /></MasterAdminRoute>} />
+        </Route>
+
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
   );

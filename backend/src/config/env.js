@@ -16,6 +16,12 @@ const optional = [
   'SMTP_PASS',
   'EMAIL_FROM',
   'CLOUDINARY_URL',
+  // Phase 2
+  'TOMTOM_API_KEY',
+  // Phase 4 — master admin seeding
+  'ADMIN_EMAIL',
+  'ADMIN_PASSWORD',
+  'ADMIN_NAME',
 ];
 
 const validateEnv = () => {
@@ -55,6 +61,12 @@ const config = {
   },
 
   cloudinaryUrl: process.env.CLOUDINARY_URL || '',
+
+  tomtomApiKey: process.env.TOMTOM_API_KEY || '',
+
+  adminEmail: process.env.ADMIN_EMAIL || '',
+  adminPassword: process.env.ADMIN_PASSWORD || '',
+  adminName: process.env.ADMIN_NAME || 'AumoN Master Admin',
 };
 
 module.exports = { validateEnv, config };

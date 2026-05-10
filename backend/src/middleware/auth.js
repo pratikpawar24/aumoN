@@ -54,6 +54,14 @@ const protect = async (req, res, next) => {
       });
     }
 
+    if (user.isBlocked) {
+      return res.status(403).json({
+        success: false,
+        message: 'Account has been blocked. Contact support.',
+        code: 'BLOCKED',
+      });
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -88,4 +96,24 @@ const generateToken = (userId) => {
   });
 };
 
-module.exports = { protect, optionalAuth, generateToken };
+const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required.' });
+  }
+  if (req.user.role !== 'admin_master' && req.user.role !== 'admin_secondary') {
+    return res.status(403).json({ success: false, message: 'Admin access required.' });
+  }
+  next();
+};
+
+const requireMasterAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: 'Authentication required.' });
+  }
+  if (req.user.role !== 'admin_master') {
+    return res.status(403).json({ success: false, message: 'Master admin access required.' });
+  }
+  next();
+};
+
+module.exports = { protect, optionalAuth, generateToken, requireAdmin, requireMasterAdmin };

@@ -10,6 +10,7 @@ const path = require('path');
 const { Server } = require('socket.io');
 
 const connectDB = require('./src/config/db');
+const { seedMasterAdmin } = require('./src/config/seedAdmin');
 const corsMiddleware = require('./src/config/cors');
 const { apiLimiter } = require('./src/middleware/rateLimiter');
 const { errorHandler } = require('./src/middleware/errorHandler');
@@ -84,6 +85,7 @@ app.use('/api/routes',    require('./src/routes/routeRoutes'));
 app.use('/api/trips',     require('./src/routes/tripRoutes'));
 app.use('/api/carpool',   require('./src/routes/carpoolRoutes'));
 app.use('/api/chat',      require('./src/routes/chatRoutes'));
+app.use('/api/admin',     require('./src/routes/adminRoutes'));
 app.use('/api/map',       require('./src/routes/mapRoutes'));
 app.use('/api/traffic',   require('./src/routes/trafficRoutes'));
 app.use('/api/emissions', require('./src/routes/emissionRoutes'));
@@ -103,6 +105,8 @@ app.use(errorHandler);
 // ── Start Server ─────────────────────────────────────────────────────────────
 const startServer = async () => {
   await connectDB();
+  // Seed/refresh master admin from env (no-op if vars unset).
+  try { await seedMasterAdmin(); } catch (e) { console.error('Master-admin seed failed:', e.message); }
   server.listen(config.port, () => {
     console.log(`\n🚀 AUMO Backend running on port ${config.port}`);
     console.log(`🌍 Environment: ${config.nodeEnv}`);

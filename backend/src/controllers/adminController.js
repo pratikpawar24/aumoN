@@ -1,0 +1,261 @@
+const User = require('../models/User');
+const Ride = require('../models/Ride');
+const Trip = require('../models/Trip');
+const CarpoolRequest = require('../models/CarpoolRequest');
+const AdminLog = require('../models/AdminLog');
+
+const ADMIN_FIELDS = 'name email mobile avatar role isActive isBlocked blockedAt blockReason vehicleType greenScore totalCO2Saved totalCO2Emitted totalTrips totalDistanceKm carpoolsJoined carpoolsOffered emailVerified createdAt lastLogin';
+
+const log = async (req, action, target = {}) => {
+  try {
+    await AdminLog.create({
+      actorId: req.user._id,
+      actorRole: req.user.role,
+      action,
+      targetType: target.type || 'user',
+      targetId: target.id || null,
+      metadata: target.meta || {},
+    });
+  } catch (e) {
+    console.error('AdminLog write failed:', e.message);
+  }
+};
+
+// ── Overview / stats ─────────────────────────────────────────────────────────
+exports.getStats = async (req, res, next) => {
+  try {
+    const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [
+      userCount, blockedCount, verifiedCount,
+      activeTrips, ridesToday, totalRides,
+      activeCarpools,
+      totalCo2SavedAgg,
+    ] = await Promise.all([
+      User.countDocuments({ role: 'user' }),
+      User.countDocuments({ role: 'user', isBlocked: true }),
+      User.countDocuments({ role: 'user', emailVerified: true }),
+      Trip.countDocuments({ status: 'active' }),
+      Ride.countDocuments({ createdAt: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) } }),
+      Ride.countDocuments({}),
+      CarpoolRequest.countDocuments({ status: { $in: ['pending', 'matching', 'matched'] } }),
+      Ride.aggregate([
+        { $match: { createdAt: { $gte: since30d } } },
+        { $group: { _id: null, total: { $sum: '$co2Saved' } } },
+      ]),
+    ]);
+
+    res.json({
+      success: true,
+      stats: {
+        users: { total: userCount, blocked: blockedCount, verified: verifiedCount },
+        rides: { activeTrips, today: ridesToday, total: totalRides },
+        carpool: { active: activeCarpools },
+        emissions: {
+          co2SavedG_30d: totalCo2SavedAgg[0]?.total || 0,
+        },
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Users ───────────────────────────────────────────────────────────────────
+exports.listUsers = async (req, res, next) => {
+  try {
+    const { search, status, page = 1, limit = 25 } = req.query;
+    const filter = { role: 'user' };
+    if (search) {
+      const re = new RegExp(String(search).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      filter.$or = [{ name: re }, { email: re }, { mobile: re }];
+    }
+    if (status === 'blocked') filter.isBlocked = true;
+    if (status === 'unverified') filter.emailVerified = false;
+
+    const skip = (parseInt(page, 10) - 1) * parseInt(limit, 10);
+    const [users, total] = await Promise.all([
+      User.find(filter)
+        .select(ADMIN_FIELDS)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit, 10))
+        .lean(),
+      User.countDocuments(filter),
+    ]);
+
+    res.json({
+      success: true,
+      users,
+      pagination: { page: parseInt(page, 10), limit: parseInt(limit, 10), total },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getUser = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.params.id).select(ADMIN_FIELDS);
+    if (!user) return res.status(404).json({ success: false, message: 'User not found' });
+
+    // Recent ride history (last 50)
+    const rides = await Ride.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    // CO2 savings timeseries (last 30 days, daily buckets)
+    const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const series = await Ride.aggregate([
+      { $match: { userId: user._id, createdAt: { $gte: since30d } } },
+      {
+        $group: {
+          _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } },
+          co2Saved: { $sum: '$co2Saved' },
+          rides: { $sum: 1 },
+          distance: { $sum: '$distanceKm' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]);
+
+    res.json({ success: true, user, rides, series });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.blockUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (target.role === 'admin_master') {
+      return res.status(403).json({ success: false, message: 'Master admin cannot be blocked.' });
+    }
+    if (target.role === 'admin_secondary' && req.user.role !== 'admin_master') {
+      return res.status(403).json({ success: false, message: 'Only the master admin can act on other admins.' });
+    }
+
+    target.isBlocked = true;
+    target.blockedAt = new Date();
+    target.blockedBy = req.user._id;
+    target.blockReason = req.body?.reason || '';
+    await target.save();
+
+    await log(req, 'user.block', { type: target.role.startsWith('admin') ? 'admin' : 'user', id: target._id, meta: { reason: target.blockReason } });
+    res.json({ success: true, user: target.toSafeObject() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.unblockUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    target.isBlocked = false;
+    target.blockedAt = null;
+    target.blockReason = '';
+    await target.save();
+
+    await log(req, 'user.unblock', { type: target.role.startsWith('admin') ? 'admin' : 'user', id: target._id });
+    res.json({ success: true, user: target.toSafeObject() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.removeUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+    if (target.role === 'admin_master') {
+      return res.status(403).json({ success: false, message: 'Master admin cannot be removed.' });
+    }
+    if (target.role === 'admin_secondary' && req.user.role !== 'admin_master') {
+      return res.status(403).json({ success: false, message: 'Only the master admin can remove other admins.' });
+    }
+    // Soft delete: deactivate rather than hard-delete to preserve history.
+    target.isActive = false;
+    target.isBlocked = true;
+    target.blockedAt = new Date();
+    target.blockedBy = req.user._id;
+    target.blockReason = req.body?.reason || 'Removed by admin';
+    await target.save();
+
+    await log(req, 'user.remove', { type: target.role.startsWith('admin') ? 'admin' : 'user', id: target._id });
+    res.json({ success: true, message: 'User removed.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Active rides feed ────────────────────────────────────────────────────────
+exports.activeRides = async (req, res, next) => {
+  try {
+    const trips = await Trip.find({ status: 'active' })
+      .sort({ startedAt: -1 })
+      .limit(50)
+      .populate('userId', 'name avatar')
+      .lean();
+    res.json({ success: true, trips });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Master-only: secondary admin management ──────────────────────────────────
+exports.listAdmins = async (req, res, next) => {
+  try {
+    const admins = await User.find({ role: 'admin_secondary' })
+      .select(ADMIN_FIELDS)
+      .sort({ createdAt: -1 })
+      .lean();
+    res.json({ success: true, admins });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.createAdmin = async (req, res, next) => {
+  try {
+    const { name, email, password, mobile } = req.body;
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'name, email, password required' });
+    }
+    const existing = await User.findOne({ email: email.toLowerCase() });
+    if (existing) {
+      return res.status(409).json({ success: false, message: 'Email already in use' });
+    }
+    const admin = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      mobile: mobile || '',
+      role: 'admin_secondary',
+      emailVerified: true,
+      isActive: true,
+    });
+    await log(req, 'admin.create', { type: 'admin', id: admin._id, meta: { email: admin.email } });
+    res.status(201).json({ success: true, admin: admin.toSafeObject() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.adminActivity = async (req, res, next) => {
+  try {
+    const { adminId, limit = 100 } = req.query;
+    const filter = {};
+    if (adminId) filter.actorId = adminId;
+    const logs = await AdminLog.find(filter)
+      .sort({ createdAt: -1 })
+      .limit(Math.min(parseInt(limit, 10) || 100, 500))
+      .populate('actorId', 'name email role')
+      .lean();
+    res.json({ success: true, logs });
+  } catch (err) {
+    next(err);
+  }
+};

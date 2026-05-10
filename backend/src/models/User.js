@@ -119,6 +119,18 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
     refreshToken: { type: String, select: false },
+
+    // Roles & moderation
+    role: {
+      type: String,
+      enum: ['user', 'admin_secondary', 'admin_master'],
+      default: 'user',
+      index: true,
+    },
+    isBlocked: { type: Boolean, default: false, index: true },
+    blockedAt: { type: Date, default: null },
+    blockedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    blockReason: { type: String, default: '' },
   },
   {
     timestamps: true,

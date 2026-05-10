@@ -17,8 +17,13 @@ const Login = () => {
     setError('');
     setLoading(true);
     try {
-      await login(form.email, form.password);
-      navigate('/map');
+      const data = await login(form.email, form.password);
+      const role = data?.user?.role;
+      if (role === 'admin_master' || role === 'admin_secondary') {
+        navigate('/admin');
+      } else {
+        navigate('/map');
+      }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
