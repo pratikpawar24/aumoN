@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { MapProvider }           from './context/MapContext';
-import { ThemeProvider }         from './context/ThemeContext';
 import ErrorBoundary             from './components/Common/ErrorBoundary';
 import Navbar                    from './components/Common/Navbar';
 import { FullPageLoader }        from './components/Common/Loading';
@@ -109,16 +108,14 @@ const AppRoutes = () => {
 
 const App = () => (
   <ErrorBoundary>
-    <ThemeProvider>
-      <AuthProvider>
-        <MapProvider>
-          <Router>
-            <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
-            <AppRoutes />
-          </Router>
-        </MapProvider>
-      </AuthProvider>
-    </ThemeProvider>
+    <AuthProvider>
+      <MapProvider>
+        <Router>
+          <Toaster position="top-right" toastOptions={TOAST_OPTIONS} />
+          <AppRoutes />
+        </Router>
+      </MapProvider>
+    </AuthProvider>
   </ErrorBoundary>
 );
 

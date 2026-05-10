@@ -2,30 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Theme tokens ──────────────────────────────────────────────────────────
-   Components opt in by using utility classes below (.aumo-bg-page etc.)
-   instead of hardcoded inline styles. The .dark class on <html> flips
-   every variable in one place — that's what makes the theme toggle work.
-   ────────────────────────────────────────────────────────────────────────── */
+/* ── Theme tokens (single dark theme, locked) ─────────────────────────────
+   Components use the utility classes below (.aumo-bg-page etc.) instead
+   of hardcoded inline styles. Theme toggle was removed — dark is the only
+   theme. */
 :root {
-  /* light (default) */
-  --aumo-bg-page:        #f8fafc;
-  --aumo-bg-surface:     #ffffff;
-  --aumo-bg-elevated:    #f1f5f9;
-  --aumo-text-primary:   #0f172a;
-  --aumo-text-muted:     #475569;
-  --aumo-text-subtle:    #64748b;
-  --aumo-border:         rgba(15, 23, 42, 0.08);
-  --aumo-border-strong:  rgba(15, 23, 42, 0.15);
-  --aumo-nav-bg:         rgba(255, 255, 255, 0.85);
-  --aumo-nav-border:     rgba(15, 23, 42, 0.08);
-  --aumo-input-bg:       #ffffff;
-  --aumo-glass-bg:       rgba(255, 255, 255, 0.65);
-  --aumo-overlay:        rgba(255, 255, 255, 0.75);
-}
-
-html.dark,
-html[data-theme="dark"] {
   --aumo-bg-page:        #0f172a;
   --aumo-bg-surface:     rgba(30, 41, 59, 0.8);
   --aumo-bg-elevated:    rgba(15, 23, 42, 0.8);
@@ -39,24 +20,6 @@ html[data-theme="dark"] {
   --aumo-input-bg:       rgba(15, 23, 42, 0.8);
   --aumo-glass-bg:       rgba(15, 23, 42, 0.55);
   --aumo-overlay:        rgba(15, 23, 42, 0.7);
-}
-
-/* Force the light-mode vars when explicitly opted-in, even if a stale
-   `dark` class lingers somewhere. data-theme is the source of truth. */
-html[data-theme="light"] {
-  --aumo-bg-page:        #f8fafc;
-  --aumo-bg-surface:     #ffffff;
-  --aumo-bg-elevated:    #f1f5f9;
-  --aumo-text-primary:   #0f172a;
-  --aumo-text-muted:     #475569;
-  --aumo-text-subtle:    #64748b;
-  --aumo-border:         rgba(15, 23, 42, 0.08);
-  --aumo-border-strong:  rgba(15, 23, 42, 0.15);
-  --aumo-nav-bg:         rgba(255, 255, 255, 0.85);
-  --aumo-nav-border:     rgba(15, 23, 42, 0.08);
-  --aumo-input-bg:       #ffffff;
-  --aumo-glass-bg:       rgba(255, 255, 255, 0.65);
-  --aumo-overlay:        rgba(255, 255, 255, 0.75);
 }
 
 @layer utilities {

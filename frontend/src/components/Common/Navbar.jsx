@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { useTheme } from '../../context/ThemeContext';
 import {
   Navigation, Users, BarChart3, User,
-  Sun, Moon, Menu, X, LogOut, Leaf
+  Menu, X, LogOut, Leaf
 } from 'lucide-react';
 import { API_URL } from '../../utils/constants';
 
@@ -22,7 +21,6 @@ const resolveAvatarUrl = (avatar) => {
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuth();
-  const { isDark, toggleTheme }           = useTheme();
   const location  = useLocation();
   const navigate  = useNavigate();
   const [mobileOpen,  setMobileOpen]  = useState(false);
@@ -71,14 +69,6 @@ const Navbar = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
-            <button onClick={toggleTheme}
-                    aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
-                    className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center
-                               rounded-lg aumo-text-muted hover:aumo-text-primary
-                               hover:bg-black/5 dark:hover:bg-white/10 transition-all">
-              {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-
             {isAuthenticated ? (
               <div className="relative">
                 <button
