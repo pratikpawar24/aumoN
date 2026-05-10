@@ -11,8 +11,8 @@ const carpoolService = {
     return res.data;
   },
 
-  getAvailableRides: async (lat, lng, radius = 5) => {
-    const res = await api.get('/api/carpool/available', { params: { lat, lng, radius } });
+  getAvailableRides: async (params = {}) => {
+    const res = await api.get('/api/carpool/available', { params });
     return res.data;
   },
 
@@ -26,8 +26,18 @@ const carpoolService = {
     return res.data;
   },
 
-  getCarpoolHistory: async () => {
-    const res = await api.get('/api/carpool/history');
+  getCarpoolHistory: async (params = {}) => {
+    const res = await api.get('/api/carpool/history', { params });
+    return res.data;
+  },
+
+  // ── Chat ─────────────────────────────────────────────────────────────────
+  listMessages: async (rideId) => {
+    const res = await api.get(`/api/chat/${rideId}/messages`);
+    return res.data;
+  },
+  sendMessage: async (rideId, body) => {
+    const res = await api.post(`/api/chat/${rideId}/messages`, { body });
     return res.data;
   },
 };

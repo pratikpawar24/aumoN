@@ -50,6 +50,18 @@ const carpoolRequestSchema = new mongoose.Schema(
       min: 1,
       max: 4,
     },
+    // Driver-set fare per seat (INR). Optional — null means "negotiate in chat".
+    price: {
+      type: Number,
+      default: null,
+      min: 0,
+      max: 100000,
+    },
+    notes: {
+      type: String,
+      default: '',
+      maxlength: 280,
+    },
     role: {
       type: String,
       enum: ['driver', 'passenger'],

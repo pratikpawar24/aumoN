@@ -38,18 +38,30 @@ export const useCarpool = () => {
     }
   }, []);
 
-  const loadAvailable = useCallback(async (lat, lng) => {
+  const loadAvailable = useCallback(async (params = {}) => {
+    setLoading(true);
     try {
-      const data = await carpoolService.getAvailableRides(lat, lng);
+      const data = await carpoolService.getAvailableRides(params);
       setAvailable(data.rides || []);
-    } catch { }
+      return data;
+    } catch (err) {
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (filters = {}) => {
+    setLoading(true);
     try {
-      const data = await carpoolService.getCarpoolHistory();
+      const data = await carpoolService.getCarpoolHistory(filters);
       setHistory(data.requests || []);
-    } catch { }
+      return data;
+    } catch (err) {
+      return null;
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   const cancelRequest = useCallback(async (id) => {

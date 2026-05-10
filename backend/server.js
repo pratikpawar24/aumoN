@@ -29,6 +29,14 @@ io.on('connection', (socket) => {
     socket.join(`carpool_${matchId}`);
   });
 
+  socket.on('join-chat-room', (rideId) => {
+    socket.join(`chat_${rideId}`);
+  });
+
+  socket.on('leave-chat-room', (rideId) => {
+    socket.leave(`chat_${rideId}`);
+  });
+
   socket.on('route-update', (data) => {
     socket.broadcast.emit('route-updated', data);
   });
@@ -75,6 +83,7 @@ app.use('/api/auth',      require('./src/routes/authRoutes'));
 app.use('/api/routes',    require('./src/routes/routeRoutes'));
 app.use('/api/trips',     require('./src/routes/tripRoutes'));
 app.use('/api/carpool',   require('./src/routes/carpoolRoutes'));
+app.use('/api/chat',      require('./src/routes/chatRoutes'));
 app.use('/api/map',       require('./src/routes/mapRoutes'));
 app.use('/api/traffic',   require('./src/routes/trafficRoutes'));
 app.use('/api/emissions', require('./src/routes/emissionRoutes'));

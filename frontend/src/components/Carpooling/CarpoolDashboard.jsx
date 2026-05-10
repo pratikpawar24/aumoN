@@ -1,164 +1,58 @@
-import React, { useEffect, useState } from 'react';
-import { Users, Plus, Clock, CheckCircle, XCircle, Leaf } from 'lucide-react';
-import { useCarpool } from '../../hooks/useCarpool';
-import RideRequest    from './RideRequest';
-import RideMatch      from './RideMatch';
-import RideHistory    from './RideHistory';
-import { formatRelativeTime } from '../../utils/helpers';
-import { Spinner } from '../Common/Loading';
+import React, { useState } from 'react';
+import { Users, Search, Calendar, Clock } from 'lucide-react';
+import FindRides    from './FindRides';
+import ScheduleRide from './ScheduleRide';
+import RideHistory  from './RideHistory';
+import ChatPanel    from './ChatPanel';
 
-const STATUS_CONFIG = {
-  pending:   { color: '#f59e0b', icon: Clock,       label: 'Pending'   },
-  matching:  { color: '#3b82f6', icon: Clock,       label: 'Matching'  },
-  matched:   { color: '#22c55e', icon: CheckCircle, label: 'Matched'   },
-  completed: { color: '#64748b', icon: CheckCircle, label: 'Completed' },
-  cancelled: { color: '#ef4444', icon: XCircle,     label: 'Cancelled' },
-};
+const TABS = [
+  { id: 'find',     label: 'Find Rides',    icon: Search },
+  { id: 'schedule', label: 'Schedule Ride', icon: Calendar },
+  { id: 'history',  label: 'History',       icon: Clock },
+];
 
 const CarpoolDashboard = () => {
-  const { requests, loading, matchResult, loadMyRequests, cancelRequest } = useCarpool();
-  const [activeTab,  setActiveTab]  = useState('requests');
-  const [showCreate, setShowCreate] = useState(false);
-
-  useEffect(() => {
-    loadMyRequests();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  const tabs = [
-    { id: 'requests', label: 'My Requests', count: requests.length },
-    { id: 'history',  label: 'History' },
-  ];
+  const [tab, setTab] = useState('find');
+  const [chatRide, setChatRide] = useState(null);
 
   return (
-    <div className="max-w-2xl mx-auto p-4 space-y-6">
+    <div className="max-w-2xl mx-auto p-4 space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-green-400" />
-            Smart Carpool
-          </h1>
-          <p className="text-slate-400 text-sm mt-1">
-            Share rides, reduce emissions together
-          </p>
-        </div>
-        <button
-          onClick={() => setShowCreate((p) => !p)}
-          className="flex items-center gap-2 px-4 py-2.5 bg-green-500
-                     hover:bg-green-600 text-white rounded-xl font-medium
-                     transition-colors shadow-lg"
-        >
-          <Plus className="w-4 h-4" />
-          New Request
-        </button>
+      <div>
+        <h1 className="text-2xl font-bold aumo-text-primary flex items-center gap-2">
+          <Users className="w-6 h-6 text-green-500" />
+          Smart Carpool
+        </h1>
+        <p className="aumo-text-subtle text-sm mt-1">
+          Share rides, save fuel, cut emissions.
+        </p>
       </div>
 
-      {/* Create request form */}
-      {showCreate && (
-        <div className="animate-slide-up">
-          <RideRequest onSuccess={() => { setShowCreate(false); loadMyRequests(); }} />
-        </div>
-      )}
-
-      {/* Match result notification */}
-      {matchResult?.match && (
-        <RideMatch match={matchResult.match} />
-      )}
-
       {/* Tabs */}
-      <div className="flex gap-2 rounded-xl p-1"
-           style={{ background: 'rgba(30,41,59,0.8)' }}>
-        {tabs.map((tab) => (
+      <div className="flex gap-1 rounded-xl p-1 aumo-bg-surface border aumo-border">
+        {TABS.map(({ id, label, icon: Icon }) => (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all
-                        ${activeTab === tab.id
+            key={id}
+            onClick={() => setTab(id)}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 min-h-[44px]
+                        rounded-lg text-sm font-medium transition-all
+                        ${tab === id
                           ? 'bg-green-500 text-white shadow'
-                          : 'text-slate-400 hover:text-white'}`}
+                          : 'aumo-text-subtle hover:aumo-text-primary'}`}
           >
-            {tab.label}
-            {tab.count > 0 && (
-              <span className="ml-1.5 text-xs bg-white/20 px-1.5 py-0.5 rounded-full">
-                {tab.count}
-              </span>
-            )}
+            <Icon className="w-4 h-4" />
+            <span className="hidden sm:inline">{label}</span>
+            <span className="sm:hidden">{label.split(' ')[0]}</span>
           </button>
         ))}
       </div>
 
       {/* Tab content */}
-      {loading ? (
-        <div className="flex justify-center py-8"><Spinner /></div>
-      ) : activeTab === 'requests' ? (
-        <div className="space-y-3">
-          {requests.length === 0 ? (
-            <div className="text-center py-12">
-              <Users className="w-12 h-12 text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-400">No active requests</p>
-              <p className="text-sm text-slate-500 mt-1">Create one to start carpooling!</p>
-            </div>
-          ) : (
-            requests.map((req) => {
-              const sc = STATUS_CONFIG[req.status] || STATUS_CONFIG.pending;
-              return (
-                <div key={req._id}
-                     className="rounded-xl border border-white/10 p-4"
-                     style={{ background: 'rgba(30,41,59,0.8)' }}>
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full"
-                           style={{ background: sc.color }} />
-                      <span className="text-sm font-medium"
-                            style={{ color: sc.color }}>
-                        {sc.label}
-                      </span>
-                    </div>
-                    <span className="text-xs text-slate-400">
-                      {formatRelativeTime(req.createdAt)}
-                    </span>
-                  </div>
+      {tab === 'find'     && <FindRides    onOpenChat={setChatRide} />}
+      {tab === 'schedule' && <ScheduleRide onSuccess={() => setTab('history')} />}
+      {tab === 'history'  && <RideHistory />}
 
-                  <div className="space-y-1.5 mb-3">
-                    <div className="flex gap-2 text-xs text-slate-300">
-                      <span className="text-green-400">From:</span>
-                      <span className="truncate">{req.pickup?.address || 'Pickup location'}</span>
-                    </div>
-                    <div className="flex gap-2 text-xs text-slate-300">
-                      <span className="text-red-400">To:</span>
-                      <span className="truncate">{req.dropoff?.address || 'Drop-off location'}</span>
-                    </div>
-                    <div className="flex gap-2 text-xs text-slate-400">
-                      <Clock className="w-3 h-3" />
-                      {new Date(req.departureTime).toLocaleString()}
-                    </div>
-                  </div>
-
-                  {req.matchId && (
-                    <div className="flex items-center gap-1.5 text-xs text-green-400
-                                    rounded-lg px-3 py-1.5 mb-3"
-                         style={{ background: 'rgba(34,197,94,0.1)' }}>
-                      <Leaf className="w-3 h-3" />
-                      <span>Matched! Check your match for route details.</span>
-                    </div>
-                  )}
-
-                  {['pending', 'matching'].includes(req.status) && (
-                    <button
-                      onClick={() => cancelRequest(req._id)}
-                      className="text-xs text-red-400 hover:text-red-300 transition-colors"
-                    >
-                      Cancel request
-                    </button>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
-      ) : (
-        <RideHistory />
-      )}
+      {chatRide && <ChatPanel ride={chatRide} onClose={() => setChatRide(null)} />}
     </div>
   );
 };

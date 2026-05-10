@@ -6,7 +6,8 @@ exports.createRequest = async (req, res, next) => {
   try {
     const {
       pickup, dropoff, departureTime, timeWindowMinutes,
-      maxDetourMinutes, seatsNeeded, role, preferences, vehicleType,
+      maxDetourMinutes, seatsNeeded, seatsAvailable, role,
+      preferences, vehicleType, price, notes,
     } = req.body;
 
     const depDate = new Date(departureTime);
@@ -21,9 +22,12 @@ exports.createRequest = async (req, res, next) => {
       timeWindowMinutes: timeWindowMinutes || 30,
       maxDetourMinutes: maxDetourMinutes || 10,
       seatsNeeded: seatsNeeded || 1,
+      seatsAvailable: role === 'driver' ? (seatsAvailable ?? 1) : 0,
       role: role || 'passenger',
       preferences: preferences || {},
       vehicleType: vehicleType || 'car',
+      price: price != null && price !== '' ? Number(price) : null,
+      notes: notes || '',
       status: 'pending',
     });
 
@@ -80,9 +84,17 @@ exports.getMyRequests = async (req, res, next) => {
 
 exports.getAvailableRides = async (req, res, next) => {
   try {
-    const { lat, lng, radius = 5 } = req.query;
-    const now = new Date();
+    const {
+      // Legacy: single point + radius (still supported)
+      lat, lng, radius = 5,
+      // New: separate from/to filters with their own radii
+      fromLat, fromLng, toLat, toLng, fromRadius, toRadius,
+      // relevance | time | price | proximity
+      sort = 'time',
+      limit = 30,
+    } = req.query;
 
+    const now = new Date();
     const query = {
       status: 'pending',
       role: 'driver',
@@ -93,21 +105,60 @@ exports.getAvailableRides = async (req, res, next) => {
 
     const rides = await CarpoolRequest.find(query)
       .populate('userId', 'name avatar vehicleType greenScore')
-      .sort({ departureTime: 1 })
-      .limit(20);
+      .limit(parseInt(limit, 10) || 30)
+      .lean();
 
-    // Filter by proximity if lat/lng provided
-    let filtered = rides;
-    if (lat && lng) {
-      filtered = rides.filter((r) => {
-        const dist = carpoolMatchingService._haversine(
-          parseFloat(lat), parseFloat(lng), r.pickup.lat, r.pickup.lng
-        );
-        return dist <= parseFloat(radius);
-      });
-    }
+    const haversine = carpoolMatchingService._haversine;
+    const fr = parseFloat(fromRadius || radius || 5);
+    const tr = parseFloat(toRadius || radius || 5);
 
-    res.json({ success: true, rides: filtered });
+    // Compute per-ride scores: distance from user's from→pickup and to→dropoff.
+    const enriched = rides.map((r) => {
+      let pickupDistKm = null;
+      let dropoffDistKm = null;
+      if (fromLat && fromLng) {
+        pickupDistKm = haversine(parseFloat(fromLat), parseFloat(fromLng), r.pickup.lat, r.pickup.lng);
+      } else if (lat && lng) {
+        pickupDistKm = haversine(parseFloat(lat), parseFloat(lng), r.pickup.lat, r.pickup.lng);
+      }
+      if (toLat && toLng) {
+        dropoffDistKm = haversine(parseFloat(toLat), parseFloat(toLng), r.dropoff.lat, r.dropoff.lng);
+      }
+      return { ...r, _pickupDistKm: pickupDistKm, _dropoffDistKm: dropoffDistKm };
+    });
+
+    // Apply proximity filter: any provided endpoint must be within its radius.
+    let filtered = enriched.filter((r) => {
+      if (r._pickupDistKm != null && r._pickupDistKm > fr) return false;
+      if (r._dropoffDistKm != null && r._dropoffDistKm > tr) return false;
+      return true;
+    });
+
+    // Sort
+    const sorters = {
+      time: (a, b) => new Date(a.departureTime) - new Date(b.departureTime),
+      price: (a, b) => (a.price ?? Infinity) - (b.price ?? Infinity),
+      proximity: (a, b) => (a._pickupDistKm ?? Infinity) - (b._pickupDistKm ?? Infinity),
+      // Relevance: pickup-near + dropoff-near + soonest (lower = better)
+      relevance: (a, b) => {
+        const sa = (a._pickupDistKm ?? 0) + (a._dropoffDistKm ?? 0);
+        const sb = (b._pickupDistKm ?? 0) + (b._dropoffDistKm ?? 0);
+        if (sa !== sb) return sa - sb;
+        return new Date(a.departureTime) - new Date(b.departureTime);
+      },
+    };
+    filtered.sort(sorters[sort] || sorters.time);
+
+    // Round distances for display, drop internal underscored keys.
+    const out = filtered.map((r) => ({
+      ...r,
+      pickupDistanceKm: r._pickupDistKm != null ? Math.round(r._pickupDistKm * 10) / 10 : null,
+      dropoffDistanceKm: r._dropoffDistKm != null ? Math.round(r._dropoffDistKm * 10) / 10 : null,
+      _pickupDistKm: undefined,
+      _dropoffDistKm: undefined,
+    }));
+
+    res.json({ success: true, rides: out, sort });
   } catch (err) {
     next(err);
   }
@@ -155,12 +206,28 @@ exports.cancelRequest = async (req, res, next) => {
 
 exports.getCarpoolHistory = async (req, res, next) => {
   try {
-    const requests = await CarpoolRequest.find({
-      userId: req.user._id,
-      status: { $in: ['completed', 'matched'] },
-    })
+    const { from, to, status, role, limit = 50 } = req.query;
+    const filter = { userId: req.user._id };
+
+    if (status) {
+      filter.status = { $in: status.split(',').map((s) => s.trim()) };
+    } else {
+      filter.status = { $in: ['completed', 'matched', 'cancelled'] };
+    }
+
+    if (role && ['driver', 'passenger'].includes(role)) {
+      filter.role = role;
+    }
+
+    if (from || to) {
+      filter.departureTime = {};
+      if (from) filter.departureTime.$gte = new Date(from);
+      if (to) filter.departureTime.$lte = new Date(to);
+    }
+
+    const requests = await CarpoolRequest.find(filter)
       .sort({ createdAt: -1 })
-      .limit(20)
+      .limit(Math.min(parseInt(limit, 10) || 50, 100))
       .populate('matchId')
       .lean();
     res.json({ success: true, requests });
