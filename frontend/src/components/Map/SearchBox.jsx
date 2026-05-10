@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Search, X, MapPin, Bus, Building2, ShoppingBag,
-         Hospital, GraduationCap, Hotel, UtensilsCrossed, Fuel,
+         Stethoscope, GraduationCap, Hotel, UtensilsCrossed, Fuel,
          Home, Route } from 'lucide-react';
 import mapService from '../../services/mapService';
 import { Spinner } from '../Common/Loading';
@@ -11,7 +11,7 @@ const CATEGORY_ICONS = {
   apartment:   <Building2        className="w-3 h-3 text-blue-400"   />,
   house:       <Home             className="w-3 h-3 text-emerald-400"/>,
   street:      <Route            className="w-3 h-3 text-slate-300"  />,
-  hospital:    <Hospital         className="w-3 h-3 text-blue-400"   />,
+  hospital:    <Stethoscope      className="w-3 h-3 text-blue-400"   />,
   school:      <GraduationCap    className="w-3 h-3 text-purple-400" />,
   university:  <GraduationCap    className="w-3 h-3 text-purple-400" />,
   hotel:       <Hotel            className="w-3 h-3 text-pink-400"   />,
