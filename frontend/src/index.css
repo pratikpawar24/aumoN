@@ -85,6 +85,21 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+/* ── Safety net: any form control without explicit theme classes still
+   stays readable across light/dark. Components that opt into the
+   aumo-text-primary utility continue to win because Tailwind utility
+   classes have higher specificity than this generic element selector. */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]),
+textarea,
+select {
+  color: var(--aumo-text-primary);
+}
+input::placeholder,
+textarea::placeholder {
+  color: var(--aumo-text-subtle);
+  opacity: 1;
+}
+
 /* Larger touch targets on mobile */
 @media (max-width: 640px) {
   button, a[role="button"], input, select, textarea {

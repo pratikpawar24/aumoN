@@ -117,10 +117,10 @@ const SearchBox = ({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {label && (
-        <label className="block text-xs font-medium text-slate-400 mb-1">{label}</label>
+        <label className="block text-xs font-medium aumo-text-subtle mb-1">{label}</label>
       )}
       <div className="relative flex items-center">
-        <div className="absolute left-3 text-slate-400 pointer-events-none">
+        <div className="absolute left-3 aumo-text-subtle pointer-events-none">
           {icon || <Search className="w-4 h-4" />}
         </div>
         <input
@@ -132,12 +132,11 @@ const SearchBox = ({
           placeholder={placeholder}
           autoComplete="off"
           className="w-full pl-10 pr-10 py-3 rounded-xl text-sm
-                     text-white placeholder-slate-500
-                     border border-white/10
+                     aumo-bg-input aumo-text-primary placeholder:aumo-text-subtle
+                     border aumo-border
                      focus:border-green-500/50 focus:outline-none
                      focus:ring-1 focus:ring-green-500/30
                      transition-all"
-          style={{ background: 'rgba(30,41,59,0.8)' }}
         />
         <div className="absolute right-3 flex items-center gap-1">
           {loading && <Spinner size="sm" />}
@@ -145,7 +144,7 @@ const SearchBox = ({
             <button
               onClick={handleClear}
               type="button"
-              className="text-slate-400 hover:text-white transition-colors"
+              className="aumo-text-subtle hover:aumo-text-primary transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -156,9 +155,8 @@ const SearchBox = ({
       {open && results.length > 0 && (
         <div
           className="absolute top-full left-0 right-0 mt-1 z-50
-                     border border-white/10 rounded-xl shadow-2xl
+                     border aumo-border aumo-bg-surface rounded-xl shadow-2xl
                      overflow-hidden max-h-64 overflow-y-auto"
-          style={{ background: 'rgba(15,23,42,0.97)' }}
         >
           {results.map((result, i) => (
             <button
@@ -166,24 +164,24 @@ const SearchBox = ({
               onClick={() => handleSelect(result)}
               type="button"
               className="w-full flex items-start gap-3 px-4 py-3 text-left
-                         hover:bg-white/10 transition-colors
-                         border-b border-white/5 last:border-0"
+                         hover:bg-black/5 dark:hover:bg-white/10 transition-colors
+                         border-b aumo-border last:border-0"
             >
               <div className="mt-0.5 flex-shrink-0">
                 {getCategoryIcon(result.category || '')}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium text-white truncate">
+                <p className="text-sm font-medium aumo-text-primary truncate">
                   {result.name || (result.display || '').split(',')[0]}
                 </p>
                 {result.display && result.display !== result.name && (
-                  <p className="text-xs text-slate-400 truncate mt-0.5">
+                  <p className="text-xs aumo-text-muted truncate mt-0.5">
                     {result.display}
                   </p>
                 )}
               </div>
               {result.category && (
-                <span className="flex-shrink-0 text-xs text-slate-500 capitalize mt-0.5">
+                <span className="flex-shrink-0 text-xs aumo-text-subtle capitalize mt-0.5">
                   {(result.category || '').replace('_', ' ')}
                 </span>
               )}

@@ -1,7 +1,13 @@
 const axios = require('axios');
 const { config } = require('../config/env');
 
-const OSRM_BASE = 'https://router.project-osrm.org';
+// Multiple public OSRM mirrors. The "official" demo at project-osrm.org
+// is rate-limited from many hosted-app IP ranges and routinely times out;
+// we try each mirror in turn before falling through to ORS / straight-line.
+const OSRM_MIRRORS = [
+  'https://router.project-osrm.org',
+  'https://routing.openstreetmap.de/routed-car',  // driving profile only
+];
 const ORS_BASE = 'https://api.openrouteservice.org/v2';
 
 class RoutingService {
@@ -36,28 +42,45 @@ class RoutingService {
   async getOSRMRoute(origin, destination, options = {}) {
     try {
       const profile = this._osrmProfile(options.vehicleType);
-      const url = `${OSRM_BASE}/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
-      const res = await axios.get(url, {
-        params: {
-          overview: 'full',
-          geometries: 'geojson',
-          steps: true,
-          annotations: false,
-        },
-        // The public OSRM demo started enforcing User-Agent — without it
-        // requests come back as opaque errors. Also set Accept explicitly.
-        headers: {
-          'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
-          'Accept': 'application/json',
-        },
-        timeout: 20000,
-        // Treat anything 2xx as success so we surface real upstream errors
-        // instead of getting a cryptic empty err.message.
-        validateStatus: (s) => s >= 200 && s < 300,
-      });
+      const path = `/route/v1/${profile}/${origin.lng},${origin.lat};${destination.lng},${destination.lat}`;
+      let lastError = null;
+      let res = null;
 
-      if (!res.data.routes || res.data.routes.length === 0) {
-        throw new Error('No route found by OSRM');
+      // Try each mirror in turn with a tighter per-attempt timeout so total
+      // fallback wait stays bounded (~16s instead of 20s × N).
+      for (const base of OSRM_MIRRORS) {
+        // openstreetmap.de hosts driving only — skip non-driving profiles
+        if (base.includes('routed-car') && profile !== 'car') continue;
+        const url = `${base}${path}`;
+        try {
+          res = await axios.get(url, {
+            params: {
+              overview: 'full',
+              geometries: 'geojson',
+              steps: true,
+              annotations: false,
+            },
+            headers: {
+              'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
+              'Accept': 'application/json',
+            },
+            timeout: 8000,
+            validateStatus: (s) => s >= 200 && s < 300,
+          });
+          if (res.data?.routes?.length) break;
+          lastError = new Error(`OSRM ${base}: empty result`);
+          res = null;
+        } catch (err) {
+          const status = err.response?.status;
+          lastError = new Error(
+            `OSRM ${base} failed: ${err.message || ''}${status ? ` [HTTP ${status}]` : ''}`
+          );
+          continue;
+        }
+      }
+
+      if (!res || !res.data?.routes?.length) {
+        throw lastError || new Error('No OSRM mirror returned a route');
       }
 
       const route = res.data.routes[0];
