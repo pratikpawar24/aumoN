@@ -18,6 +18,11 @@ const mapService = {
     return res.data;
   },
 
+  getWeather: async (lat, lng) => {
+    const res = await api.get('/api/map/weather', { params: { lat, lng } });
+    return res.data;
+  },
+
   getBusStops: async (lat, lng, radius = 1000) => {
     const res = await api.get('/api/map/bus-stops', { params: { lat, lng, radius } });
     return res.data;

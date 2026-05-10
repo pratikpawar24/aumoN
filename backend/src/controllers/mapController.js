@@ -1,5 +1,6 @@
 const geocodingService = require('../services/geocodingService');
 const poiService = require('../services/poiService');
+const weatherService = require('../services/weatherService');
 
 exports.searchLocations = async (req, res, next) => {
   try {
@@ -102,6 +103,22 @@ exports.getStreets = async (req, res, next) => {
     // Use Nominatim to search for street names
     const results = await geocodingService.geocode(`street near ${lat},${lng}`, 10);
     res.json({ success: true, streets: results });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.getWeather = async (req, res, next) => {
+  try {
+    const { lat, lng } = req.query;
+    if (!lat || !lng) {
+      return res.status(400).json({ success: false, message: 'lat and lng required.' });
+    }
+    const data = await weatherService.getCurrent(parseFloat(lat), parseFloat(lng));
+    if (!data) {
+      return res.json({ success: true, weather: null, configured: weatherService.isConfigured() });
+    }
+    res.json({ success: true, weather: data });
   } catch (err) {
     next(err);
   }

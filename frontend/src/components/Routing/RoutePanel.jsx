@@ -30,6 +30,7 @@ const RoutePanel = () => {
   const [departureTime,  setDepartureTime]  = useState('');
   const [avoidCongestion,setAvoidCongestion]= useState(true);
   const [tripStarting, setTripStarting] = useState(false);
+  const [weather, setWeather] = useState(null);
 
   const handleReroute = useCallback(async () => {
     if (!origin || !destination) return;
@@ -84,6 +85,13 @@ const RoutePanel = () => {
       departureTime: departureTime || null,
       avoidCongestion,
     });
+    // Fetch weather at origin for context. Silently null when not configured.
+    try {
+      const res = await mapService.getWeather(origin.lat, origin.lng);
+      setWeather(res.weather || null);
+    } catch {
+      setWeather(null);
+    }
   };
 
   const handleSwap = () => {
@@ -305,6 +313,23 @@ const RoutePanel = () => {
         {/* Results */}
         {currentRoute && (
           <div className="space-y-3">
+            {weather && (
+              <div className="rounded-xl border border-white/10 px-3 py-2 flex items-center gap-2 text-xs"
+                   style={{ background: 'rgba(30,41,59,0.8)' }}>
+                <span className="text-base">
+                  {weather.condition === 'Clear'      ? '☀️'
+                   : weather.condition === 'Rain'     ? '🌧️'
+                   : weather.condition === 'Drizzle'  ? '🌦️'
+                   : weather.condition === 'Clouds'   ? '☁️'
+                   : weather.condition === 'Snow'     ? '❄️'
+                   : weather.condition === 'Thunderstorm' ? '⛈️'
+                   : '🌡️'}
+                </span>
+                <span className="text-white font-medium">{weather.temperatureC}°C</span>
+                <span className="text-slate-400 capitalize">{weather.description}</span>
+                <span className="ml-auto text-slate-500">{weather.windKmh} km/h wind</span>
+              </div>
+            )}
             <CarbonScore
               score={currentRoute.green_score}
               co2Saved={currentRoute.carbon_saved_g}

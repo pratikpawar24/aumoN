@@ -22,6 +22,8 @@ const optional = [
   'ADMIN_EMAIL',
   'ADMIN_PASSWORD',
   'ADMIN_NAME',
+  // Phase 7
+  'OPENWEATHER_API_KEY',
 ];
 
 const validateEnv = () => {
@@ -67,6 +69,8 @@ const config = {
   adminEmail: process.env.ADMIN_EMAIL || '',
   adminPassword: process.env.ADMIN_PASSWORD || '',
   adminName: process.env.ADMIN_NAME || 'AumoN Master Admin',
+
+  openWeatherApiKey: process.env.OPENWEATHER_API_KEY || '',
 };
 
 module.exports = { validateEnv, config };

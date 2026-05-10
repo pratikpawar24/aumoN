@@ -12,5 +12,6 @@ router.get('/bus-stops', mapLimiter, mapController.getBusStops);
 router.get('/buildings', mapLimiter, mapController.getBuildings);
 router.get('/shops', mapLimiter, mapController.getShops);
 router.get('/streets', mapLimiter, mapController.getStreets);
+router.get('/weather', mapLimiter, mapController.getWeather);
 
 module.exports = router;
