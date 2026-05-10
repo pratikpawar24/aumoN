@@ -81,7 +81,7 @@ const MapPage = () => {
             </button>
 
             {layerOpen && (
-              <div className="absolute top-12 right-0 rounded-xl border aumo-border aumo-bg-surface
+              <div className="absolute top-12 right-0 rounded-xl border aumo-border aumo-bg-popover
                               shadow-xl w-36 py-1">
                 {mapStyles.map((s) => (
                   <button

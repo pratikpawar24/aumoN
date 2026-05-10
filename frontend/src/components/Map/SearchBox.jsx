@@ -155,7 +155,7 @@ const SearchBox = ({
       {open && results.length > 0 && (
         <div
           className="absolute top-full left-0 right-0 mt-1 z-50
-                     border aumo-border aumo-bg-surface rounded-xl shadow-2xl
+                     border aumo-border aumo-bg-popover rounded-xl shadow-2xl
                      overflow-hidden max-h-64 overflow-y-auto"
         >
           {results.map((result, i) => (
