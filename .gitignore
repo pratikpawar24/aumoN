@@ -93,6 +93,9 @@ test-results/
 # ── Docker ────────────────────────────────────────────────────────────────────
 .dockerignore
 
+# ── User uploads (disk fallback for avatars) ──────────────────────────────────
+backend/uploads/
+
 # ── Misc ──────────────────────────────────────────────────────────────────────
 .sass-cache/
 *.pid

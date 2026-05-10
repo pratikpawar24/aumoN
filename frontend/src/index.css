@@ -2,7 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme tokens ──────────────────────────────────────────────────────────
+   Components opt in by using utility classes below (.aumo-bg-page etc.)
+   instead of hardcoded inline styles. The .dark class on <html> flips
+   every variable in one place — that's what makes the theme toggle work.
+   ────────────────────────────────────────────────────────────────────────── */
+:root {
+  /* light (default) */
+  --aumo-bg-page:        #f8fafc;
+  --aumo-bg-surface:     #ffffff;
+  --aumo-bg-elevated:    #f1f5f9;
+  --aumo-text-primary:   #0f172a;
+  --aumo-text-muted:     #475569;
+  --aumo-text-subtle:    #64748b;
+  --aumo-border:         rgba(15, 23, 42, 0.08);
+  --aumo-border-strong:  rgba(15, 23, 42, 0.15);
+  --aumo-nav-bg:         rgba(255, 255, 255, 0.85);
+  --aumo-nav-border:     rgba(15, 23, 42, 0.08);
+  --aumo-input-bg:       #ffffff;
+  --aumo-glass-bg:       rgba(255, 255, 255, 0.65);
+  --aumo-overlay:        rgba(255, 255, 255, 0.75);
+}
+
+html.dark {
+  --aumo-bg-page:        #0f172a;
+  --aumo-bg-surface:     rgba(30, 41, 59, 0.8);
+  --aumo-bg-elevated:    rgba(15, 23, 42, 0.8);
+  --aumo-text-primary:   #f8fafc;
+  --aumo-text-muted:     #cbd5e1;
+  --aumo-text-subtle:    #94a3b8;
+  --aumo-border:         rgba(255, 255, 255, 0.10);
+  --aumo-border-strong:  rgba(255, 255, 255, 0.18);
+  --aumo-nav-bg:         rgba(15, 23, 42, 0.9);
+  --aumo-nav-border:     rgba(255, 255, 255, 0.08);
+  --aumo-input-bg:       rgba(15, 23, 42, 0.8);
+  --aumo-glass-bg:       rgba(15, 23, 42, 0.55);
+  --aumo-overlay:        rgba(15, 23, 42, 0.7);
+}
+
+@layer utilities {
+  .aumo-bg-page      { background: var(--aumo-bg-page); }
+  .aumo-bg-surface   { background: var(--aumo-bg-surface); }
+  .aumo-bg-elevated  { background: var(--aumo-bg-elevated); }
+  .aumo-bg-input     { background: var(--aumo-input-bg); }
+  .aumo-bg-nav       { background: var(--aumo-nav-bg); }
+  .aumo-bg-overlay   { background: var(--aumo-overlay); }
+  .aumo-text-primary { color: var(--aumo-text-primary); }
+  .aumo-text-muted   { color: var(--aumo-text-muted); }
+  .aumo-text-subtle  { color: var(--aumo-text-subtle); }
+  .aumo-border       { border-color: var(--aumo-border); }
+  .aumo-border-strong{ border-color: var(--aumo-border-strong); }
+  .aumo-nav-border   { border-color: var(--aumo-nav-border); }
+  .glass {
+    background: var(--aumo-glass-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+}
+
 body {
-  @apply bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200;
+  background: var(--aumo-bg-page);
+  color: var(--aumo-text-primary);
   transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Larger touch targets on mobile */
+@media (max-width: 640px) {
+  button, a[role="button"], input, select, textarea {
+    min-height: 40px;
+  }
 }

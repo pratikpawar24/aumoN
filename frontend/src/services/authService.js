@@ -1,10 +1,41 @@
 import api from './api';
 
 const authService = {
-  register: async (name, email, password, vehicleType = 'car') => {
-    const res = await api.post('/api/auth/register', { name, email, password, vehicleType });
+  register: async ({ name, email, password, mobile, vehicleType = 'car' }) => {
+    const res = await api.post('/api/auth/register', {
+      name,
+      email,
+      password,
+      mobile: mobile || '',
+      vehicleType,
+    });
     if (res.data.token) {
       localStorage.setItem('aumo_token', res.data.token);
+      localStorage.setItem('aumo_user', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  sendVerification: async () => {
+    const res = await api.post('/api/auth/send-verification');
+    return res.data;
+  },
+
+  verifyEmail: async (otp) => {
+    const res = await api.post('/api/auth/verify-email', { otp });
+    if (res.data.user) {
+      localStorage.setItem('aumo_user', JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
+  uploadAvatar: async (file) => {
+    const formData = new FormData();
+    formData.append('avatar', file);
+    const res = await api.post('/api/auth/avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (res.data.user) {
       localStorage.setItem('aumo_user', JSON.stringify(res.data.user));
     }
     return res.data;

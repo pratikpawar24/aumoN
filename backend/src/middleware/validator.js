@@ -16,10 +16,19 @@ const registerValidation = [
   body('name').trim().isLength({ min: 2, max: 50 }).withMessage('Name must be 2-50 characters'),
   body('email').isEmail().normalizeEmail().withMessage('Valid email required'),
   body('password').isLength({ min: 6 }).withMessage('Password must be at least 6 characters'),
+  body('mobile')
+    .optional({ values: 'falsy' })
+    .matches(/^(\+?\d{1,3}[\s-]?)?\d{10}$/)
+    .withMessage('Mobile must be a valid 10-digit number'),
   body('vehicleType')
     .optional()
     .isIn(['car', 'electric', 'bus', 'bike', 'walk', 'motorcycle'])
     .withMessage('Invalid vehicle type'),
+  handleValidation,
+];
+
+const verifyEmailValidation = [
+  body('otp').isLength({ min: 6, max: 6 }).isNumeric().withMessage('OTP must be 6 digits'),
   handleValidation,
 ];
 
@@ -63,6 +72,7 @@ const paginationValidation = [
 module.exports = {
   registerValidation,
   loginValidation,
+  verifyEmailValidation,
   routeValidation,
   carpoolValidation,
   paginationValidation,

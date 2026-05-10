@@ -18,6 +18,17 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\S+@\S+\.\S+$/, 'Please enter a valid email'],
     },
+    mobile: {
+      type: String,
+      trim: true,
+      default: '',
+      // Accept 10-digit Indian numbers, with optional +country and spaces/dashes.
+      // Empty string is allowed so existing users aren't broken on save.
+      match: [
+        /^$|^(\+?\d{1,3}[\s-]?)?\d{10}$/,
+        'Please enter a valid 10-digit mobile number',
+      ],
+    },
     password: {
       type: String,
       required: [true, 'Password is required'],
@@ -101,7 +112,10 @@ const userSchema = new mongoose.Schema(
       },
     },
     // Auth
-    isVerified: { type: Boolean, default: false },
+    emailVerified: { type: Boolean, default: false },
+    verificationOtp: { type: String, select: false },
+    verificationOtpExpires: { type: Date, select: false },
+    verificationLastSentAt: { type: Date, select: false },
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
     refreshToken: { type: String, select: false },

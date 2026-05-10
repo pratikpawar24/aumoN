@@ -6,6 +6,7 @@ const express = require('express');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const http = require('http');
+const path = require('path');
 const { Server } = require('socket.io');
 
 const connectDB = require('./src/config/db');
@@ -49,6 +50,9 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(morgan(config.isProduction ? 'combined' : 'dev'));
 app.use(apiLimiter);
+
+// Serve avatars uploaded to disk (no-op when Cloudinary is configured).
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // ── Health Check ─────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

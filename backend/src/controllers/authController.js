@@ -1,21 +1,50 @@
 const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
+const emailService = require('../services/emailService');
+const uploadService = require('../services/uploadService');
+
+const OTP_TTL_MS = 10 * 60 * 1000;            // 10 minutes
+const RESEND_COOLDOWN_MS = 60 * 1000;         // 1 minute between sends
+
+const issueOtpForUser = async (user) => {
+  const otp = emailService.generateOtp();
+  user.verificationOtp = otp;
+  user.verificationOtpExpires = new Date(Date.now() + OTP_TTL_MS);
+  user.verificationLastSentAt = new Date();
+  await user.save({ validateBeforeSave: false });
+  await emailService.sendVerificationOtp({ to: user.email, name: user.name, otp });
+};
 
 exports.register = async (req, res, next) => {
   try {
-    const { name, email, password, vehicleType } = req.body;
+    const { name, email, password, mobile, vehicleType } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
       return res.status(409).json({ success: false, message: 'Email already registered.' });
     }
 
-    const user = await User.create({ name, email, password, vehicleType: vehicleType || 'car' });
+    const user = await User.create({
+      name,
+      email,
+      password,
+      mobile: mobile || '',
+      vehicleType: vehicleType || 'car',
+    });
+
+    // Send verification OTP. We don't fail registration if email delivery fails —
+    // user can request a resend from the verification screen.
+    try {
+      await issueOtpForUser(user);
+    } catch (e) {
+      console.error('Failed to send verification email on register:', e.message);
+    }
+
     const token = generateToken(user._id);
 
     res.status(201).json({
       success: true,
-      message: 'Registration successful!',
+      message: 'Registration successful! Check your email for a verification code.',
       token,
       user: user.toSafeObject(),
     });
@@ -61,7 +90,7 @@ exports.getProfile = async (req, res, next) => {
 exports.updateProfile = async (req, res, next) => {
   try {
     const allowedFields = [
-      'name', 'vehicleType', 'homeLocation', 'workLocation', 'preferences', 'avatar',
+      'name', 'mobile', 'vehicleType', 'homeLocation', 'workLocation', 'preferences', 'avatar',
     ];
     const updates = {};
     allowedFields.forEach((f) => {
@@ -100,4 +129,104 @@ exports.deleteAccount = async (req, res, next) => {
 
 exports.verifyToken = async (req, res) => {
   res.json({ success: true, user: req.user.toSafeObject() });
+};
+
+// ── Email verification ─────────────────────────────────────────────────────
+exports.sendVerification = async (req, res, next) => {
+  try {
+    const user = await User.findById(req.user._id).select(
+      '+verificationOtp +verificationOtpExpires +verificationLastSentAt'
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    if (user.emailVerified) {
+      return res.json({ success: true, alreadyVerified: true, message: 'Email is already verified.' });
+    }
+
+    if (
+      user.verificationLastSentAt &&
+      Date.now() - user.verificationLastSentAt.getTime() < RESEND_COOLDOWN_MS
+    ) {
+      const waitSec = Math.ceil(
+        (RESEND_COOLDOWN_MS - (Date.now() - user.verificationLastSentAt.getTime())) / 1000
+      );
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${waitSec}s before requesting another code.`,
+        retryAfter: waitSec,
+      });
+    }
+
+    await issueOtpForUser(user);
+    res.json({
+      success: true,
+      message: 'Verification code sent.',
+      devFallback: !emailService.isConfigured(),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No image uploaded.' });
+    }
+    const { url } = await uploadService.uploadAvatar({
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      userId: req.user._id,
+    });
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: url },
+      { new: true, runValidators: true }
+    );
+    res.json({ success: true, avatarUrl: url, user: user.toSafeObject() });
+  } catch (err) {
+    next(err);
+  }
+};
+
+exports.verifyEmail = async (req, res, next) => {
+  try {
+    const { otp } = req.body;
+    const user = await User.findById(req.user._id).select(
+      '+verificationOtp +verificationOtpExpires'
+    );
+    if (!user) return res.status(404).json({ success: false, message: 'User not found.' });
+
+    if (user.emailVerified) {
+      return res.json({ success: true, alreadyVerified: true, user: user.toSafeObject() });
+    }
+
+    if (!user.verificationOtp || !user.verificationOtpExpires) {
+      return res.status(400).json({
+        success: false,
+        message: 'No verification code on record. Request a new one.',
+      });
+    }
+
+    if (user.verificationOtpExpires.getTime() < Date.now()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Verification code expired. Request a new one.',
+        code: 'OTP_EXPIRED',
+      });
+    }
+
+    if (user.verificationOtp !== String(otp)) {
+      return res.status(400).json({ success: false, message: 'Incorrect verification code.' });
+    }
+
+    user.emailVerified = true;
+    user.verificationOtp = undefined;
+    user.verificationOtpExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+
+    res.json({ success: true, message: 'Email verified.', user: user.toSafeObject() });
+  } catch (err) {
+    next(err);
+  }
 };

@@ -9,6 +9,13 @@ const optional = [
   'ORS_API_KEY',
   'PORT',
   'NODE_ENV',
+  // Phase 1 additions — feature-flagged: app boots without these
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
+  'EMAIL_FROM',
+  'CLOUDINARY_URL',
 ];
 
 const validateEnv = () => {
@@ -24,7 +31,7 @@ const validateEnv = () => {
     }
   });
 
-  console.log('�� Environment variables validated');
+  console.log('✅ Environment variables validated');
 };
 
 const config = {
@@ -38,6 +45,16 @@ const config = {
   orsApiKey: process.env.ORS_API_KEY || '',
   isProduction: process.env.NODE_ENV === 'production',
   isDevelopment: process.env.NODE_ENV !== 'production',
+
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.EMAIL_FROM || 'AUMO <no-reply@aumo.app>',
+  },
+
+  cloudinaryUrl: process.env.CLOUDINARY_URL || '',
 };
 
 module.exports = { validateEnv, config };

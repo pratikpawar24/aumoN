@@ -40,11 +40,27 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, []);
 
-  const register = useCallback(async (name, email, password, vehicleType) => {
+  const register = useCallback(async (payload) => {
     setError(null);
-    const data = await authService.register(name, email, password, vehicleType);
+    const data = await authService.register(payload);
     setUser(data.user);
     toast.success(`Welcome to AUMO, ${data.user.name}! 🌿`);
+    return data;
+  }, []);
+
+  const sendVerificationEmail = useCallback(async () => {
+    return authService.sendVerification();
+  }, []);
+
+  const verifyEmail = useCallback(async (otp) => {
+    const data = await authService.verifyEmail(otp);
+    if (data.user) setUser(data.user);
+    return data;
+  }, []);
+
+  const uploadAvatar = useCallback(async (file) => {
+    const data = await authService.uploadAvatar(file);
+    if (data.user) setUser(data.user);
     return data;
   }, []);
 
@@ -73,11 +89,15 @@ export const AuthProvider = ({ children }) => {
         loading,
         error,
         isAuthenticated: !!user,
+        emailVerified: !!user?.emailVerified,
         login,
         register,
         logout,
         updateUser,
         refreshUser,
+        sendVerificationEmail,
+        verifyEmail,
+        uploadAvatar,
       }}
     >
       {children}
