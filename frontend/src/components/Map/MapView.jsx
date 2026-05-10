@@ -30,7 +30,7 @@ const MapController = ({ onMapClick }) => {
 const MapView = ({ onMapClick, className = '' }) => {
   const {
     mapStyle,
-    currentRoute, alternatives,
+    currentRoute,
     origin, destination,
     pois, busStops, buildings,
     showPOIs, showBusStops, showBuildings,
@@ -67,10 +67,9 @@ const MapView = ({ onMapClick, className = '' }) => {
           />
         )}
 
-        {alternatives.map((alt, i) => (
-          <RouteLayer key={`alt_${i}`} route={alt} isSelected={false} isAlternative />
-        ))}
-
+        {/* Only the currently-selected route is drawn on the map.
+            Alternatives appear in the side panel; clicking one moves it
+            into currentRoute and replaces what's drawn here. */}
         {currentRoute && (
           <RouteLayer route={currentRoute} isSelected />
         )}

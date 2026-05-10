@@ -216,7 +216,10 @@ const RoutePanel = () => {
           </div>
         </div>
 
-        {/* Optimize for */}
+        {/* Optimize for. Clicking a mode after a route already exists
+            triggers a fresh recalculation in that mode — guarantees all
+            four (eco / fastest / shortest / balanced) get their own
+            request rather than relying on OSRM-returned alternatives. */}
         <div>
           <label className="text-xs font-medium text-slate-400 mb-2 block">
             Optimize For
@@ -225,7 +228,18 @@ const RoutePanel = () => {
             {OPTIMIZE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
-                onClick={() => setOptimizeFor(opt.value)}
+                onClick={() => {
+                  setOptimizeFor(opt.value);
+                  // Auto-recalculate when changing modes after a route
+                  // is already on screen.
+                  if (origin && destination && currentRoute) {
+                    calculateRoute(origin, destination, {
+                      vehicleType, optimizeFor: opt.value,
+                      departureTime: departureTime || null,
+                      avoidCongestion,
+                    });
+                  }
+                }}
                 className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border
                             text-xs font-medium transition-all
                             ${optimizeFor === opt.value
