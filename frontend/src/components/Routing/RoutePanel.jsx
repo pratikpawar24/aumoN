@@ -44,7 +44,7 @@ const RoutePanel = () => {
       avoidCongestion,
       avoidTolls,
     });
-  }, [origin, destination, vehicleType, optimizeFor, departureTime, avoidCongestion, calculateRoute]);
+  }, [origin, destination, vehicleType, optimizeFor, departureTime, avoidCongestion, avoidTolls, calculateRoute]);
 
   const tracker = useTripTracker({ onReroute: handleReroute });
 
