@@ -4,7 +4,7 @@ import { useMapContext } from '../context/MapContext';
 import toast from 'react-hot-toast';
 
 export const useRoute = () => {
-  const { setCurrentRoute, setAlternatives } = useMapContext();
+  const { setCurrentRoute, setAlternatives, setTrafficData } = useMapContext();
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
   const [routeResult,    setRouteResult]    = useState(null);
@@ -25,6 +25,11 @@ export const useRoute = () => {
         setCurrentRoute(result.primary_route);
         setAlternatives(result.alternatives || []);
         setRouteResult(result);
+        // Surface the bbox-grid traffic overlay returned by the AI service so
+        // the existing TrafficLayer renders it without a separate fetch.
+        if (result.traffic_overlay?.length) {
+          setTrafficData({ segments: result.traffic_overlay });
+        }
         const co2 = result.primary_route.carbon_saved_g;
         if (co2 > 0) {
           toast.success(
@@ -44,7 +49,7 @@ export const useRoute = () => {
     } finally {
       setLoading(false);
     }
-  }, [setCurrentRoute, setAlternatives]);
+  }, [setCurrentRoute, setAlternatives, setTrafficData]);
 
   const loadHistory = useCallback(async (page = 1, filters = {}) => {
     setHistoryLoading(true);

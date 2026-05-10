@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import { Navigation, Leaf, ChevronDown, ChevronUp, Locate } from 'lucide-react';
 import SearchBox     from '../Map/SearchBox';
 import CarbonScore   from './CarbonScore';
 import RouteDetails  from './RouteDetails';
 import AlternativeRoutes from './AlternativeRoutes';
+import StartTripButton from './StartTripButton';
 import { useMapContext } from '../../context/MapContext';
 import { useRoute }      from '../../hooks/useRoute';
 import { useMap }        from '../../hooks/useMap';
+import { useTripTracker } from '../../hooks/useTripTracker';
 import { VEHICLE_TYPES, OPTIMIZE_OPTIONS } from '../../utils/constants';
 import { Spinner }   from '../Common/Loading';
 import mapService    from '../../services/mapService';
@@ -20,12 +22,26 @@ const RoutePanel = () => {
   } = useMapContext();
   const { calculateRoute, loading } = useRoute();
   const { flyTo, loadPOIs }         = useMap();
+  const { setUserLocation } = useMapContext();
 
   const [vehicleType,    setVehicleType]    = useState('car');
   const [optimizeFor,    setOptimizeFor]    = useState('carbon');
   const [showAdvanced,   setShowAdvanced]   = useState(false);
   const [departureTime,  setDepartureTime]  = useState('');
   const [avoidCongestion,setAvoidCongestion]= useState(true);
+  const [tripStarting, setTripStarting] = useState(false);
+
+  const handleReroute = useCallback(async () => {
+    if (!origin || !destination) return;
+    toast('Off-route — recalculating…', { icon: '🧭' });
+    await calculateRoute(origin, destination, {
+      vehicleType, optimizeFor,
+      departureTime: departureTime || null,
+      avoidCongestion,
+    });
+  }, [origin, destination, vehicleType, optimizeFor, departureTime, avoidCongestion, calculateRoute]);
+
+  const tracker = useTripTracker({ onReroute: handleReroute });
 
   const handleOriginSelect = async (loc) => {
     if (!loc) { setOrigin(null); return; }
@@ -74,6 +90,43 @@ const RoutePanel = () => {
     const tmp = origin;
     setOrigin(destination);
     setDestination(tmp);
+  };
+
+  // Bridge tracker.position → MapContext.userLocation so the marker layer
+  // renders the live GPS dot.
+  React.useEffect(() => {
+    if (tracker.position) {
+      setUserLocation({ lat: tracker.position.lat, lng: tracker.position.lng });
+    }
+  }, [tracker.position, setUserLocation]);
+
+  const handleStartTrip = async () => {
+    if (!currentRoute || !origin || !destination) {
+      toast.error('Calculate a route first');
+      return;
+    }
+    setTripStarting(true);
+    try {
+      await tracker.startTrip({
+        origin, destination,
+        route: currentRoute,
+        rideId: currentRoute.rideId,
+      });
+      toast.success('Trip started — drive safe! 🌿');
+    } catch (err) {
+      toast.error(err.message || 'Could not start trip');
+    } finally {
+      setTripStarting(false);
+    }
+  };
+
+  const handleStopTrip = async () => {
+    try {
+      await tracker.endTrip();
+      toast.success('Trip ended');
+    } catch (err) {
+      toast.error('Could not end trip');
+    }
   };
 
   return (
@@ -256,8 +309,17 @@ const RoutePanel = () => {
               score={currentRoute.green_score}
               co2Saved={currentRoute.carbon_saved_g}
               emission={currentRoute.total_emissions_g}
+              savingsPercent={currentRoute.co2_savings_percent}
             />
             <RouteDetails route={currentRoute} />
+            <StartTripButton
+              isAvailable={tracker.isAvailable}
+              tracking={tracker.tracking}
+              starting={tripStarting}
+              position={tracker.position}
+              onStart={handleStartTrip}
+              onStop={handleStopTrip}
+            />
             {alternatives.length > 0 && (
               <AlternativeRoutes alternatives={alternatives} />
             )}

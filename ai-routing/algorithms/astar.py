@@ -39,20 +39,28 @@ def astar_carbon_aware(
         return None
 
     target_lat, target_lng = node_coords[target]
-    avg_ef = get_emission_factor(vehicle_type, 40.0, 'moderate')
-    max_speed = 60.0  # km/h upper bound for heuristic
+
+    # Admissible bounds: heuristic must NEVER exceed true remaining cost.
+    # Use the lowest possible EF (best road class, no congestion, no speed
+    # penalty) and the highest possible speed (motorway upper) so each
+    # component is a strict lower bound.
+    vt = vehicle_type.lower()
+    if vt in ('bike', 'walk'):
+        best_ef = 0.0
+    else:
+        base = {'car': 150.0, 'electric': 55.0, 'bus': 90.0, 'motorcycle': 100.0}.get(vt, 150.0)
+        best_ef = base * 0.92  # tertiary road, free-flow, no >60 km/h penalty
+    max_speed = 130.0  # above any realistic posted limit
 
     def heuristic(node_id: str) -> float:
         if node_id not in node_coords:
             return 0.0
         lat, lng = node_coords[node_id]
         dist = haversine_distance(lat, lng, target_lat, target_lng)
-        # Lower-bound on time
-        time_h = dist / max_speed
-        time_min = time_h * 60.0
-        emission = dist * avg_ef
-        # Normalize using same scale as edge weights
-        return alpha * (time_min / 60.0) + beta * (emission / 500.0) + gamma * (dist / 50.0)
+        time_min = (dist / max_speed) * 60.0
+        emission = dist * best_ef
+        # Same raw-units composition as compute_edge_weight (admissible LB).
+        return alpha * time_min + beta * (emission / 100.0) + gamma * dist
 
     # f = g + h, g = actual cost so far
     open_set = [(heuristic(source), 0.0, source)]
@@ -116,15 +124,22 @@ def astar_carbon_aware(
 
     baseline_emission = total_dist * 150.0
     carbon_saved = max(0.0, baseline_emission - total_emission)
-    green_score = min(100.0, (carbon_saved / baseline_emission) * 100.0 + 50.0) \
-                  if baseline_emission > 0 else 100.0
+
+    if baseline_emission > 0:
+        savings_pct = (carbon_saved / baseline_emission) * 100.0
+        green_score = max(0.0, min(100.0, savings_pct))
+    else:
+        savings_pct = 100.0 if vehicle_type in ('bike', 'walk') else 0.0
+        green_score = savings_pct
 
     return {
         'path': path,
         'total_distance_km': round(total_dist, 3),
         'total_time_minutes': round(total_time, 2),
         'total_emissions_g': round(total_emission, 2),
+        'baseline_emission_g': round(baseline_emission, 2),
         'carbon_saved_g': round(carbon_saved, 2),
+        'co2_savings_percent': round(savings_pct, 1),
         'green_score': round(green_score, 1),
         'segment_details': segments,
         'algorithm': 'astar_carbon_aware'

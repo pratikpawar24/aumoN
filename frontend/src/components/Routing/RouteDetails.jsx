@@ -19,6 +19,7 @@ const RouteDetails = ({ route }) => {
     total_time_minutes: time,
     total_emissions_g: emission,
     carbon_saved_g: saved,
+    co2_savings_percent: savingsPct,
     green_score: score,
     vehicle_type: vehicleType,
     label,
@@ -77,7 +78,8 @@ const RouteDetails = ({ route }) => {
           <div className="flex items-center gap-2">
             <Zap className="w-3.5 h-3.5 text-primary-400" />
             <span className="text-xs text-primary-400 font-medium">
-              Saving {formatEmission(saved)} CO₂ vs average car trip
+              Saving {formatEmission(saved)} CO₂
+              {savingsPct != null && ` (−${Math.round(savingsPct)}%)`} vs solo car trip
             </span>
           </div>
         </div>

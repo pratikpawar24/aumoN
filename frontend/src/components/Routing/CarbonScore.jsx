@@ -2,7 +2,7 @@ import React from 'react';
 import { Leaf, TrendingDown } from 'lucide-react';
 import { formatEmission, getGreenScoreInfo } from '../../utils/helpers';
 
-const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0 }) => {
+const CarbonScore = ({ score = 0, co2Saved = 0, emission = 0, savingsPercent = null }) => {
   const info         = getGreenScoreInfo(score);
   const radius       = 40;
   const circumference = 2 * Math.PI * radius;
@@ -61,7 +61,11 @@ const CarbonScore = ({ score = 50, co2Saved = 0, emission = 0 }) => {
             <p className="text-sm font-bold text-green-400">
               {formatEmission(co2Saved)}
             </p>
-            <p className="text-xs text-slate-400">vs baseline</p>
+            {savingsPercent != null && (
+              <p className="text-xs text-green-400/80">
+                −{Math.round(savingsPercent)}% vs solo car
+              </p>
+            )}
           </div>
         )}
       </div>

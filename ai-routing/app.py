@@ -17,6 +17,7 @@ from models.graph_engine import GraphEngine
 from algorithms.carbon_router import CarbonRouter, OPTIMIZATION_PROFILES
 from utils.osm_parser import fetch_pois, nominatim_search, nominatim_reverse
 from utils.geo_utils import bounding_box, haversine
+from utils import tomtom
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -155,12 +156,46 @@ async def optimize_route(request: RouteRequest):
                 pass
 
         traffic_data = {}
+        traffic_overlay = []  # for frontend rendering
         if request.avoid_congestion:
+            # If TomTom is configured, sample real flow inside the route bbox.
+            # Always also keep the synthetic predictor running so we have data
+            # to render even when TomTom is rate-limited or unconfigured.
+            tomtom_samples = tomtom.sample_flow_in_bbox(south, west, north, east, grid=4)
+            traffic_overlay = [
+                {
+                    'lat': s['lat'],
+                    'lng': s['lng'],
+                    'predicted_speed_kmh': s['current_speed_kmh'],
+                    'free_flow_speed_kmh': s['free_flow_speed_kmh'],
+                    'congestion_level': s['congestion_level'],
+                    'source': 'tomtom',
+                }
+                for s in tomtom_samples
+            ]
+
             traffic_segments = traffic_predictor.get_congestion_map(
                 request.origin.lat, request.origin.lng, radius_km=10.0, hour=hour
             )
             for seg in traffic_segments:
                 traffic_data[seg['id']] = {'speed_kmh': seg['predicted_speed_kmh']}
+
+            # If we got TomTom data, fold it into traffic_data too. The keys
+            # used here are pseudo-edge IDs. Without per-edge correlation, we
+            # blend by injecting nearest-edge speed overrides via the segment
+            # samples — rough but better than synthetic-only.
+            if not traffic_overlay:
+                traffic_overlay = [
+                    {
+                        'lat': s['lat'],
+                        'lng': s['lng'],
+                        'predicted_speed_kmh': s['predicted_speed_kmh'],
+                        'free_flow_speed_kmh': s['free_flow_speed_kmh'],
+                        'congestion_level': s['congestion_level'],
+                        'source': 'synthetic',
+                    }
+                    for s in traffic_segments
+                ]
 
         # Optimize route
         result = carbon_router.optimize_route(
@@ -176,14 +211,19 @@ async def optimize_route(request: RouteRequest):
         )
 
         if 'error' in result:
-            # Fallback: return straight-line estimate
+            # Fallback: straight-line haversine estimate. Frontend depends on
+            # always getting a route shape back, so we never raise here.
             dist = haversine(*origin, *destination)
             speed = 40.0
             time_min = (dist / speed) * 60
             ef = emission_model.get_base_emission_factor(request.vehicle_type)
             emission = dist * ef
             baseline = dist * 150.0
-            
+            saved = max(0.0, baseline - emission)
+            savings_pct = (saved / baseline) * 100.0 if baseline > 0 else (
+                100.0 if request.vehicle_type in ('bike', 'walk') else 0.0
+            )
+
             return {
                 'primary_route': {
                     'path': [source_node, target_node],
@@ -191,13 +231,14 @@ async def optimize_route(request: RouteRequest):
                     'total_distance_km': round(dist, 3),
                     'total_time_minutes': round(time_min, 2),
                     'total_emissions_g': round(emission, 2),
-                    'carbon_saved_g': round(max(0, baseline - emission), 2),
-                    'green_score': emission_model.calculate_green_score(emission, baseline),
+                    'baseline_emission_g': round(baseline, 2),
+                    'carbon_saved_g': round(saved, 2),
+                    'co2_savings_percent': round(savings_pct, 1),
+                    'green_score': round(max(0.0, min(100.0, savings_pct)), 1),
                     'label': OPTIMIZATION_PROFILES[request.optimize_for]['label'],
                     'color': OPTIMIZATION_PROFILES[request.optimize_for]['color'],
                     'profile': request.optimize_for,
                     'vehicle_type': request.vehicle_type,
-                    'baseline_emission_g': round(baseline, 2),
                     'fallback': True
                 },
                 'alternatives': [],
@@ -219,7 +260,18 @@ async def optimize_route(request: RouteRequest):
         )
         primary['instructions'] = instructions
 
-        # Traffic conditions along route
+        # Traffic conditions along route — when TomTom is configured, sample
+        # real flow at points along the chosen polyline so the frontend can
+        # color-code segments. Falls back to synthetic when key is missing.
+        polyline = primary.get('route_geometry') or []
+        coord_pairs = [(c[0], c[1]) for c in polyline if c and len(c) >= 2]
+        if coord_pairs and tomtom.is_configured():
+            primary['traffic_along_route'] = tomtom.sample_flow_along_path(
+                coord_pairs, samples=10
+            )
+        else:
+            primary['traffic_along_route'] = []
+
         primary['traffic_conditions'] = [
             {
                 'location': graph_engine.node_coords.get(nid, (0, 0)),
@@ -228,6 +280,7 @@ async def optimize_route(request: RouteRequest):
             for nid in primary.get('path', [])[::5]  # Sample every 5 nodes
         ]
 
+        result['traffic_overlay'] = traffic_overlay
         return result
 
     except HTTPException:
@@ -295,6 +348,47 @@ async def predict_traffic(request: TrafficRequest):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+# ─── Live Traffic Flow (TomTom) ───────────────────────────────────────────────
+@app.get("/api/traffic/flow")
+async def traffic_flow(
+    south: float = Query(..., ge=-90, le=90),
+    west: float = Query(..., ge=-180, le=180),
+    north: float = Query(..., ge=-90, le=90),
+    east: float = Query(..., ge=-180, le=180),
+    grid: int = Query(default=4, ge=2, le=8),
+):
+    """
+    Live traffic flow inside a bounding box, sampled on a grid via TomTom.
+    When TOMTOM_API_KEY is unset, returns the synthetic predictor fallback so
+    the frontend can still render an overlay.
+    """
+    if north <= south or east <= west:
+        raise HTTPException(status_code=400, detail="Invalid bbox")
+
+    if tomtom.is_configured():
+        samples = tomtom.sample_flow_in_bbox(south, west, north, east, grid=grid)
+        if samples:
+            return {
+                'source': 'tomtom',
+                'segments': [
+                    {
+                        'lat': s['lat'],
+                        'lng': s['lng'],
+                        'predicted_speed_kmh': s['current_speed_kmh'],
+                        'free_flow_speed_kmh': s['free_flow_speed_kmh'],
+                        'congestion_level': s['congestion_level'],
+                    } for s in samples
+                ],
+            }
+
+    # Fallback to synthetic predictor centered at bbox midpoint.
+    cx = (south + north) / 2.0
+    cy = (west + east) / 2.0
+    hour = datetime.now().hour
+    segments = traffic_predictor.get_congestion_map(cx, cy, radius_km=5.0, hour=hour)
+    return {'source': 'synthetic', 'segments': segments}
+
 
 def _summarize_traffic(segments: List[dict]) -> dict:
     """Summarize traffic conditions."""

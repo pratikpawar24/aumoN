@@ -73,6 +73,7 @@ app.get('/', (req, res) => {
 // ── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api/auth',      require('./src/routes/authRoutes'));
 app.use('/api/routes',    require('./src/routes/routeRoutes'));
+app.use('/api/trips',     require('./src/routes/tripRoutes'));
 app.use('/api/carpool',   require('./src/routes/carpoolRoutes'));
 app.use('/api/map',       require('./src/routes/mapRoutes'));
 app.use('/api/traffic',   require('./src/routes/trafficRoutes'));

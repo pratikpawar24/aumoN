@@ -37,6 +37,10 @@ class AIProxyService {
     return this.proxyRequest('POST', '/api/traffic/predict', payload);
   }
 
+  async getTrafficFlow(bbox) {
+    return this.proxyRequest('GET', '/api/traffic/flow', null, bbox);
+  }
+
   async estimateEmissions(payload) {
     return this.proxyRequest('POST', '/api/emissions/estimate', payload);
   }
