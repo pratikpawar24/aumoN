@@ -5,6 +5,7 @@ import {
   Zap, Shield, Globe, ArrowRight, Map
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import Footer from '../components/Common/Footer';
 
 const FeatureCard = ({ icon: Icon, title, desc, color }) => (
   <div className="glass rounded-2xl p-6 border border-white/10 hover:border-white/20
@@ -136,6 +137,8 @@ const Home = () => {
           </div>
         </section>
       )}
+
+      <Footer />
     </div>
   );
 };

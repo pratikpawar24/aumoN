@@ -16,6 +16,8 @@ import DashboardPage from './pages/DashboardPage';
 import ProfilePage   from './pages/ProfilePage';
 import AboutPage     from './pages/AboutPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import PrivacyPage     from './pages/PrivacyPage';
+import TermsPage       from './pages/TermsPage';
 import Login         from './components/Auth/Login';
 import Register      from './components/Auth/Register';
 
@@ -73,6 +75,8 @@ const AppRoutes = () => {
         <Route path="/"          element={<Home />}         />
         <Route path="/map"       element={<MapPage />}      />
         <Route path="/about"     element={<AboutPage />}    />
+        <Route path="/privacy"   element={<PrivacyPage />}  />
+        <Route path="/terms"     element={<TermsPage />}    />
         <Route path="/login"     element={<Login />}        />
         <Route path="/register"  element={<Register />}     />
         <Route path="/verify-email" element={
