@@ -139,3 +139,146 @@ exports.getMultiModalComparison = async (req, res, next) => {
     next(err);
   }
 };
+
+// ── Dashboard analytics ─────────────────────────────────────────────────────
+//
+// Aggregates a user's Ride history into the buckets the dashboard chart
+// components consume. Period controls both the lookback window and the
+// granularity of time-series buckets (week → daily; month → daily; year →
+// monthly).
+//
+// Cost saved is derived from CO2 savings + carpool-share. The model:
+//   solo cost ≈ distance_km × 8 INR (petrol ₹100/L ÷ 12 km/L mileage)
+//   eco savings_inr  = co2SavedG × ₹8 / 150g  (CO2 saved → fuel saved)
+//   carpool savings_inr = solo_cost × (1 - 1/passengerCount)
+// Pure heuristics — labeled as "estimated" in the UI.
+//
+// Time saved uses a 25 km/h "average city traffic" baseline vs the actual
+// optimized route time:
+//   saved_min = max(0, distance_km / 25 * 60 - timeMinutes)
+exports.getAnalytics = async (req, res, next) => {
+  try {
+    const { period = 'month' } = req.query;
+    const now = new Date();
+    let startDate;
+    let bucketBy;
+    if (period === 'week')      { startDate = new Date(Date.now() - 7  * 24 * 3600 * 1000); bucketBy = 'day';   }
+    else if (period === 'year') { startDate = new Date(Date.now() - 365 * 24 * 3600 * 1000); bucketBy = 'month'; }
+    else                        { startDate = new Date(Date.now() - 30 * 24 * 3600 * 1000); bucketBy = 'day';   }
+
+    const userId = req.user._id;
+    const filter = { userId, createdAt: { $gte: startDate } };
+
+    const FUEL_INR_PER_KM = 8;          // petrol ₹100/L ÷ 12 km/L
+    const INR_PER_G_CO2 = FUEL_INR_PER_KM / 150;  // 0.0533
+
+    // Single pass over rides — small enough that JS aggregation is simpler
+    // than a multi-stage Mongo pipeline.
+    const Ride = require('../models/Ride');
+    const rides = await Ride.find(filter)
+      .select('distanceKm timeMinutes co2Saved co2Emissions vehicleType isCarpooled passengerCount profile createdAt')
+      .lean();
+
+    const totals = {
+      trips: rides.length,
+      co2SavedG: 0,
+      distanceKm: 0,
+      timeSavedMin: 0,
+      costSavedInr: 0,
+    };
+
+    const vehicleDist = {};   // vehicleType -> count
+    const roleSplit   = { driver: 0, passenger: 0 };
+    const co2Buckets  = {};   // bucketKey -> { co2SavedG, rides, distanceKm }
+    const monthlySaved = {};  // YYYY-MM -> { timeSavedMin, costSavedInr }
+
+    const bucketKey = (d) => {
+      const dt = new Date(d);
+      if (bucketBy === 'month') {
+        return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`;
+      }
+      return dt.toISOString().slice(0, 10);
+    };
+    const monthKey = (d) => {
+      const dt = new Date(d);
+      return `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, '0')}`;
+    };
+
+    for (const r of rides) {
+      // Time saved: optimized route vs naive 25 km/h city avg
+      const baselineMin = (r.distanceKm || 0) / 25 * 60;
+      const savedMin = Math.max(0, baselineMin - (r.timeMinutes || 0));
+
+      // Cost saved: CO2-derived fuel savings + carpool share
+      let savedInr = (r.co2Saved || 0) * INR_PER_G_CO2;
+      if (r.isCarpooled && r.passengerCount > 1) {
+        const soloCost = (r.distanceKm || 0) * FUEL_INR_PER_KM;
+        savedInr += soloCost * (1 - 1 / r.passengerCount);
+      }
+
+      totals.co2SavedG    += r.co2Saved || 0;
+      totals.distanceKm   += r.distanceKm || 0;
+      totals.timeSavedMin += savedMin;
+      totals.costSavedInr += savedInr;
+
+      vehicleDist[r.vehicleType || 'car'] = (vehicleDist[r.vehicleType || 'car'] || 0) + 1;
+
+      // Driver / passenger derived from carpool flag — passengers never
+      // count as "driver" in the Ride model, so the split is binary.
+      // (Carpool driver case is currently the same record — not separated.)
+      if (r.isCarpooled) roleSplit.passenger += 1;
+      else                roleSplit.driver += 1;
+
+      const k = bucketKey(r.createdAt);
+      if (!co2Buckets[k]) co2Buckets[k] = { co2SavedG: 0, rides: 0, distanceKm: 0 };
+      co2Buckets[k].co2SavedG  += r.co2Saved || 0;
+      co2Buckets[k].rides      += 1;
+      co2Buckets[k].distanceKm += r.distanceKm || 0;
+
+      const m = monthKey(r.createdAt);
+      if (!monthlySaved[m]) monthlySaved[m] = { timeSavedMin: 0, costSavedInr: 0 };
+      monthlySaved[m].timeSavedMin += savedMin;
+      monthlySaved[m].costSavedInr += savedInr;
+    }
+
+    const co2Series = Object.entries(co2Buckets)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, v]) => ({
+        date,
+        co2SavedKg: Math.round((v.co2SavedG / 1000) * 100) / 100,
+        rides: v.rides,
+        distanceKm: Math.round(v.distanceKm * 10) / 10,
+      }));
+
+    const monthlySeries = Object.entries(monthlySaved)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, v]) => ({
+        month,
+        timeSavedHours: Math.round((v.timeSavedMin / 60) * 10) / 10,
+        costSavedInr: Math.round(v.costSavedInr),
+      }));
+
+    res.json({
+      success: true,
+      period,
+      totals: {
+        trips: totals.trips,
+        co2SavedKg: Math.round((totals.co2SavedG / 1000) * 100) / 100,
+        distanceKm: Math.round(totals.distanceKm * 10) / 10,
+        timeSavedHours: Math.round((totals.timeSavedMin / 60) * 10) / 10,
+        costSavedInr: Math.round(totals.costSavedInr),
+      },
+      vehicleDistribution: Object.entries(vehicleDist).map(([vehicleType, count]) => ({
+        vehicleType, count,
+      })),
+      roleSplit: [
+        { name: 'Solo / driver', value: roleSplit.driver },
+        { name: 'Carpool',        value: roleSplit.passenger },
+      ],
+      co2Series,
+      monthlySeries,
+    });
+  } catch (err) {
+    next(err);
+  }
+};

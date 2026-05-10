@@ -7,6 +7,7 @@ const { routeValidation } = require('../middleware/validator');
 
 router.post('/calculate', routeLimiter, optionalAuth, routeValidation, routeController.calculateRoute);
 router.get('/history', protect, routeController.getRideHistory);
+router.get('/analytics', protect, routeController.getAnalytics);
 router.get('/favorites', protect, routeController.getFavoriteRoutes);
 router.post('/favorites', protect, routeController.saveFavoriteRoute);
 router.get('/:id', protect, routeController.getRideById);

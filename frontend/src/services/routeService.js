@@ -19,6 +19,11 @@ const routeService = {
     return res.data;
   },
 
+  getAnalytics: async (period = 'month') => {
+    const res = await api.get('/api/routes/analytics', { params: { period } });
+    return res.data;
+  },
+
   getRideById: async (id) => {
     const res = await api.get(`/api/routes/${id}`);
     return res.data;
