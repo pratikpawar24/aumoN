@@ -157,7 +157,17 @@ exports.sendVerification = async (req, res, next) => {
       });
     }
 
-    await issueOtpForUser(user);
+    try {
+      await issueOtpForUser(user);
+    } catch (mailErr) {
+      // Surface the actual provider error to the client so they can see
+      // why delivery failed (bad SMTP creds, unverified sender, etc).
+      return res.status(502).json({
+        success: false,
+        message: `Could not send verification email: ${mailErr.message}`,
+        code: 'EMAIL_SEND_FAILED',
+      });
+    }
     res.json({
       success: true,
       message: 'Verification code sent.',

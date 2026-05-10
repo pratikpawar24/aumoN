@@ -43,9 +43,8 @@ const MapPage = () => {
         className="relative z-20 flex-shrink-0 transition-all duration-300 overflow-hidden"
         style={{ width: panelOpen ? '384px' : '0px' }}
       >
-        <div className="w-96 h-full border-r border-white/10"
-             style={{ background: 'rgba(15,23,42,0.9)',
-                      backdropFilter: 'blur(12px)' }}>
+        <div className="w-96 h-full border-r aumo-border aumo-bg-nav"
+             style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
           <RoutePanel />
         </div>
       </div>
@@ -54,13 +53,10 @@ const MapPage = () => {
       <button
         onClick={() => setPanelOpen((p) => !p)}
         className="absolute top-1/2 -translate-y-1/2 z-30 w-6 h-16
-                   border border-white/10 rounded-r-lg
+                   border aumo-border rounded-r-lg aumo-bg-nav
                    flex items-center justify-center
-                   text-slate-400 hover:text-white transition-all"
-        style={{
-          left: panelOpen ? '384px' : '0px',
-          background: 'rgba(15,23,42,0.9)',
-        }}
+                   aumo-text-subtle hover:aumo-text-primary transition-all"
+        style={{ left: panelOpen ? '384px' : '0px' }}
       >
         {panelOpen
           ? <ChevronLeft className="w-3 h-3" />
@@ -76,19 +72,17 @@ const MapPage = () => {
           <div className="relative">
             <button
               onClick={() => setLayerOpen((p) => !p)}
-              className="w-10 h-10 rounded-xl border border-white/20
-                         flex items-center justify-center
-                         text-slate-300 hover:text-white transition-all shadow-md"
-              style={{ background: 'rgba(15,23,42,0.9)' }}
+              className="w-10 h-10 min-w-[44px] min-h-[44px] rounded-xl border aumo-border
+                         aumo-bg-nav flex items-center justify-center
+                         aumo-text-subtle hover:aumo-text-primary transition-all shadow-md"
               title="Map layers"
             >
               <Layers className="w-4 h-4" />
             </button>
 
             {layerOpen && (
-              <div className="absolute top-12 right-0 rounded-xl border border-white/10
-                              shadow-xl w-36 py-1"
-                   style={{ background: 'rgba(15,23,42,0.97)' }}>
+              <div className="absolute top-12 right-0 rounded-xl border aumo-border aumo-bg-surface
+                              shadow-xl w-36 py-1">
                 {mapStyles.map((s) => (
                   <button
                     key={s.id}
@@ -96,17 +90,14 @@ const MapPage = () => {
                     className={`w-full flex items-center gap-2 px-3 py-2 text-sm
                                 transition-colors text-left
                                 ${mapStyle === s.id
-                                  ? 'text-green-400'
-                                  : 'text-slate-300 hover:bg-white/10'}`}
-                    style={mapStyle === s.id
-                      ? { background: 'rgba(34,197,94,0.1)' }
-                      : {}}
+                                  ? 'text-green-500 bg-green-500/10'
+                                  : 'aumo-text-muted hover:bg-black/5 dark:hover:bg-white/10'}`}
                   >
                     <span>{s.icon}</span>{s.label}
                   </button>
                 ))}
 
-                <div className="border-t border-white/10 pt-1 mt-1 px-3 space-y-2 pb-2">
+                <div className="border-t aumo-border pt-1 mt-1 px-3 space-y-2 pb-2">
                   {[
                     { label: 'POIs',      state: showPOIs,     set: setShowPOIs     },
                     { label: 'Bus Stops', state: showBusStops, set: setShowBusStops },
@@ -116,11 +107,11 @@ const MapPage = () => {
                       key={label}
                       onClick={() => set((p) => !p)}
                       className="w-full flex items-center justify-between text-xs
-                                 text-slate-400 hover:text-white transition-colors"
+                                 aumo-text-subtle hover:aumo-text-primary transition-colors"
                     >
                       <span>{label}</span>
                       {state
-                        ? <Eye    className="w-3 h-3 text-green-400" />
+                        ? <Eye    className="w-3 h-3 text-green-500" />
                         : <EyeOff className="w-3 h-3" />}
                     </button>
                   ))}

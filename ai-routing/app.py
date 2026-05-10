@@ -18,6 +18,7 @@ from algorithms.carbon_router import CarbonRouter, OPTIMIZATION_PROFILES
 from utils.osm_parser import fetch_pois, nominatim_search, nominatim_reverse
 from utils.geo_utils import bounding_box, haversine
 from utils import tomtom
+from utils import osrm
 
 # ─── App Setup ────────────────────────────────────────────────────────────────
 app = FastAPI(
@@ -156,7 +157,10 @@ async def optimize_route(request: RouteRequest):
                 pass
 
         traffic_data = {}
-        traffic_overlay = []  # for frontend rendering
+        # Always defined so the response handler can include it whether or
+        # not the user enabled congestion avoidance, and whether or not we
+        # take the success or fallback path.
+        traffic_overlay = []
         if request.avoid_congestion:
             # If TomTom is configured, sample real flow inside the route bbox.
             # Always also keep the synthetic predictor running so we have data
@@ -211,7 +215,45 @@ async def optimize_route(request: RouteRequest):
         )
 
         if 'error' in result:
-            # Fallback: straight-line haversine estimate. Frontend depends on
+            # First try OSRM for a real road-following polyline. This is the
+            # difference between "straight line on map" and an actual route
+            # when our Overpass-derived graph fails (rate-limit, sparse OSM
+            # in the bbox, no path found).
+            osrm_result = osrm.route(*origin, *destination)
+            if osrm_result and osrm_result.get('coords'):
+                dist = osrm_result['distance_km']
+                time_min = osrm_result['duration_min']
+                ef = emission_model.get_base_emission_factor(request.vehicle_type)
+                emission = dist * ef
+                baseline = dist * 150.0
+                saved = max(0.0, baseline - emission)
+                savings_pct = (saved / baseline) * 100.0 if baseline > 0 else (
+                    100.0 if request.vehicle_type in ('bike', 'walk') else 0.0
+                )
+                return {
+                    'primary_route': {
+                        'path': [source_node, target_node],
+                        'route_geometry': [list(c) for c in osrm_result['coords']],
+                        'total_distance_km': round(dist, 3),
+                        'total_time_minutes': round(time_min, 2),
+                        'total_emissions_g': round(emission, 2),
+                        'baseline_emission_g': round(baseline, 2),
+                        'carbon_saved_g': round(saved, 2),
+                        'co2_savings_percent': round(savings_pct, 1),
+                        'green_score': round(max(0.0, min(100.0, savings_pct)), 1),
+                        'label': OPTIMIZATION_PROFILES[request.optimize_for]['label'],
+                        'color': OPTIMIZATION_PROFILES[request.optimize_for]['color'],
+                        'profile': request.optimize_for,
+                        'vehicle_type': request.vehicle_type,
+                        'fallback': 'osrm',
+                    },
+                    'alternatives': [],
+                    'modal_comparison': carbon_router._get_modal_comparison(dist, time_min),
+                    'optimization_profile': request.optimize_for,
+                    'traffic_overlay': traffic_overlay,
+                }
+
+            # Last-resort straight-line haversine. Frontend depends on
             # always getting a route shape back, so we never raise here.
             dist = haversine(*origin, *destination)
             speed = 40.0
@@ -244,6 +286,7 @@ async def optimize_route(request: RouteRequest):
                 'alternatives': [],
                 'modal_comparison': carbon_router._get_modal_comparison(dist, time_min),
                 'optimization_profile': request.optimize_for,
+                'traffic_overlay': traffic_overlay,
             }
 
         # Add route geometry to primary route

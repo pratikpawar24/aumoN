@@ -15,6 +15,7 @@ const optional = [
   'SMTP_USER',
   'SMTP_PASS',
   'EMAIL_FROM',
+  'BREVO_API_KEY',
   'CLOUDINARY_URL',
   // Phase 2
   'TOMTOM_API_KEY',
@@ -62,6 +63,7 @@ const config = {
     from: process.env.EMAIL_FROM || 'AUMO <no-reply@aumo.app>',
   },
 
+  brevoApiKey: process.env.BREVO_API_KEY || '',
   cloudinaryUrl: process.env.CLOUDINARY_URL || '',
 
   tomtomApiKey: process.env.TOMTOM_API_KEY || '',
