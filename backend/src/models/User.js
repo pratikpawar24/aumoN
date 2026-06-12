@@ -128,6 +128,8 @@ const userSchema = new mongoose.Schema(
     isActive: { type: Boolean, default: true },
     lastLogin: { type: Date, default: null },
     refreshToken: { type: String, select: false },
+    // Expo push tokens (one per device the user signs in on).
+    pushTokens: { type: [String], default: [] },
 
     // Roles & moderation
     role: {

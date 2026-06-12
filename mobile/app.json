@@ -38,6 +38,12 @@
         {
           "photosPermission": "AumoN needs access to your photos so you can set a profile picture."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#22c55e"
+        }
       ]
     ],
     "extra": {

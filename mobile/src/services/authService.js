@@ -68,6 +68,10 @@ export const authService = {
     return s ? JSON.parse(s) : null;
   },
 
+  savePushToken: async (token) => {
+    try { await api.post('/api/auth/push-token', { token }); } catch (_) { /* best effort */ }
+  },
+
   getToken: async () => AsyncStorage.getItem(STORAGE.TOKEN),
 
   logout: async () => {

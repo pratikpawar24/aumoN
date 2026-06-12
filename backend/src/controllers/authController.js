@@ -132,6 +132,20 @@ exports.verifyToken = async (req, res) => {
   res.json({ success: true, user: req.user.toSafeObject() });
 };
 
+// Register an Expo push token for this device (deduped via $addToSet).
+exports.savePushToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    if (!token || !String(token).startsWith('ExponentPushToken')) {
+      return res.status(400).json({ success: false, message: 'Valid Expo push token required.' });
+    }
+    await User.updateOne({ _id: req.user._id }, { $addToSet: { pushTokens: token } });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Email verification ─────────────────────────────────────────────────────
 exports.sendVerification = async (req, res, next) => {
   try {

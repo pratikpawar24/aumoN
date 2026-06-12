@@ -16,6 +16,7 @@ router.get('/profile', protect, authController.getProfile);
 router.put('/profile', protect, authController.updateProfile);
 router.delete('/account', protect, authController.deleteAccount);
 router.get('/verify', protect, authController.verifyToken);
+router.post('/push-token', protect, authController.savePushToken);
 
 // Email verification
 router.post('/send-verification', protect, otpLimiter, authController.sendVerification);

@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import authService from '../services/authService';
 import { setUnauthorizedHandler } from '../services/api';
+import { registerForPush } from '../services/notificationService';
 
 const AuthContext = createContext(null);
 
@@ -30,6 +31,17 @@ export const AuthProvider = ({ children }) => {
       }
     })();
   }, []);
+
+  // Once we have a logged-in user, register this device for push and store
+  // its Expo token on the account (best-effort).
+  useEffect(() => {
+    if (!user?._id) return;
+    let cancelled = false;
+    registerForPush().then((token) => {
+      if (!cancelled && token) authService.savePushToken(token);
+    });
+    return () => { cancelled = true; };
+  }, [user?._id]);
 
   const login = useCallback(async (email, password) => {
     const data = await authService.login(email, password);

@@ -20,10 +20,16 @@ backend at `https://aumo-backend-h82m.onrender.com`.
 - **Carpool** — find nearby rides, schedule a ride (driver/passenger), history,
   and a **chat inbox** to negotiate fares 1:1 with a driver in real time
   (Socket.IO); drivers can **confirm a passenger** straight from the chat.
+- **Ride details** — tap a ride in History for full details, cancel, or jump
+  to its messages.
 - **Dashboard** — CO₂ saved / trips / distance / time over week·month·year +
   green leaderboard.
 - **Profile** — stats, default vehicle, **profile photo upload** (camera roll →
   `/api/auth/avatar`), sign out.
+- **Push notifications** — registers an Expo token after login; the backend
+  pushes on new chat messages, ride confirmations and carpool matches.
+- **Admin** — an extra tab for admin accounts: live stats, user search, and
+  verify / block / unblock actions.
 
 ## Prerequisites
 - Node 18+

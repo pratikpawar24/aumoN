@@ -7,6 +7,7 @@ import ScheduleRide from './ScheduleRide';
 import RideHistory from './RideHistory';
 import ChatInbox from './ChatInbox';
 import ChatScreen from './ChatScreen';
+import RideDetailsScreen from './RideDetailsScreen';
 
 const TABS = [
   { k: 'find', label: 'Find' },
@@ -20,6 +21,7 @@ const CarpoolScreen = () => {
   const [reload, setReload] = useState(0);          // history reload
   const [inboxReload, setInboxReload] = useState(0); // inbox reload
   const [chat, setChat] = useState(null);            // { ride, peerId?, peerName? }
+  const [detail, setDetail] = useState(null);        // a history ride
 
   const goHistory = useCallback(() => { setReload((n) => n + 1); setTab('history'); }, []);
   const closeChat = useCallback(() => setChat(null), []);
@@ -48,7 +50,7 @@ const CarpoolScreen = () => {
             onOpenThread={(t) => setChat({ ride: t.ride, peerId: t.peerId, peerName: t.peer?.name })}
           />
         )}
-        {tab === 'history' && <RideHistory reloadKey={reload} />}
+        {tab === 'history' && <RideHistory reloadKey={reload} onOpenDetail={setDetail} />}
       </View>
 
       <Modal visible={!!chat} animationType="slide" onRequestClose={closeChat}>
@@ -59,6 +61,17 @@ const CarpoolScreen = () => {
             peerName={chat.peerName}
             onClose={closeChat}
             onConfirmed={() => setInboxReload((n) => n + 1)}
+          />
+        )}
+      </Modal>
+
+      <Modal visible={!!detail} animationType="slide" onRequestClose={() => setDetail(null)}>
+        {detail && (
+          <RideDetailsScreen
+            ride={detail}
+            onClose={() => setDetail(null)}
+            onCancelled={() => { setDetail(null); setReload((n) => n + 1); }}
+            onMessages={() => { setDetail(null); setTab('inbox'); }}
           />
         )}
       </Modal>

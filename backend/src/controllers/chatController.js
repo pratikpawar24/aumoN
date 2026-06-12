@@ -1,6 +1,7 @@
 const ChatMessage = require('../models/ChatMessage');
 const CarpoolRequest = require('../models/CarpoolRequest');
 const User = require('../models/User');
+const pushService = require('../services/pushService');
 
 const TTL_AFTER_RIDE_MS = 24 * 60 * 60 * 1000;  // keep history 24h past departure
 
@@ -88,6 +89,18 @@ exports.sendMessage = async (req, res, next) => {
 
     const io = req.app.get('io');
     if (io) io.to(`chat_${rideId}`).emit('chat-message', msg);
+
+    // Notify the other party of the 1:1 thread (driver ↔ this passenger).
+    if (t.peerId) {
+      const recipient = String(req.user._id) === String(t.peerId) ? t.ride.userId : t.peerId;
+      if (String(recipient) !== String(req.user._id)) {
+        pushService.sendToUser(recipient, {
+          title: `${req.user.name || 'New message'}`,
+          body: body.trim().slice(0, 140),
+          data: { type: 'chat', rideId: String(rideId), peerId: String(t.peerId) },
+        });
+      }
+    }
 
     res.status(201).json({ success: true, message: msg });
   } catch (err) {
@@ -239,6 +252,12 @@ exports.confirmRide = async (req, res, next) => {
         rideId: ride._id, passengerId, seatsAvailable: ride.seatsAvailable,
       });
     }
+
+    pushService.sendToUser(passengerId, {
+      title: 'Ride confirmed ✅',
+      body: 'A driver confirmed your seat. Tap to view the conversation.',
+      data: { type: 'chat', rideId: String(ride._id), peerId: String(passengerId) },
+    });
 
     res.json({
       success: true,

@@ -1,6 +1,7 @@
 const CarpoolRequest = require('../models/CarpoolRequest');
 const CarpoolMatch = require('../models/CarpoolMatch');
 const carpoolMatchingService = require('../services/carpoolMatchingService');
+const pushService = require('../services/pushService');
 
 exports.createRequest = async (req, res, next) => {
   try {
@@ -56,6 +57,16 @@ exports.createRequest = async (req, res, next) => {
               requestDocs.map((r) => r.userId)
             );
             matchResult = match;
+
+            // Notify the other matched riders (not the one who just requested).
+            requestDocs
+              .map((r) => r.userId)
+              .filter((uid) => String(uid) !== String(req.user._id))
+              .forEach((uid) => pushService.sendToUser(uid, {
+                title: 'Carpool matched! 🎉',
+                body: 'You\'ve been matched with a rider. Open AumoN to coordinate.',
+                data: { type: 'match', matchId: String(match._id) },
+              }));
           }
         }
       }

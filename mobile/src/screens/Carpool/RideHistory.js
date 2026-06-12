@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
 import { apiError } from '../../utils/helpers';
@@ -7,7 +7,7 @@ import Loading from '../../components/common/Loading';
 
 const STATUS_COLOR = { matched: colors.primary, pending: colors.warning, completed: colors.info, cancelled: colors.textSubtle };
 
-const RideHistory = ({ reloadKey }) => {
+const RideHistory = ({ reloadKey, onOpenDetail }) => {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -41,7 +41,7 @@ const RideHistory = ({ reloadKey }) => {
         </View>
       }
       renderItem={({ item }) => (
-        <View style={styles.card}>
+        <TouchableOpacity style={styles.card} onPress={() => onOpenDetail?.(item)} activeOpacity={0.8}>
           <View style={styles.head}>
             <Text style={styles.roleTxt}>{item.role === 'driver' ? '🚗 Driving' : '🧍 Passenger'}</Text>
             <Text style={[styles.status, { color: STATUS_COLOR[item.status] || colors.textSubtle }]}>{item.status}</Text>
@@ -49,7 +49,7 @@ const RideHistory = ({ reloadKey }) => {
           <Text style={styles.route} numberOfLines={1}>🟢 {item.pickup?.address || 'Pickup'}</Text>
           <Text style={styles.route} numberOfLines={1}>🔴 {item.dropoff?.address || 'Drop-off'}</Text>
           <Text style={styles.when}>🕑 {new Date(item.departureTime).toLocaleString()}{item.price != null ? ` · ₹${item.price}` : ''}</Text>
-        </View>
+        </TouchableOpacity>
       )}
     />
   );
