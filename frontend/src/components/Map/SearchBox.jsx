@@ -42,6 +42,7 @@ const SearchBox = ({
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [open,    setOpen]    = useState(false);
+  const [errored, setErrored] = useState(false);
   const inputRef     = useRef(null);
   const containerRef = useRef(null);
 
@@ -61,16 +62,34 @@ const SearchBox = ({
     if (!q || q.trim().length < 2) {
       setResults([]);
       setOpen(false);
+      setErrored(false);
       return;
     }
     setLoading(true);
-    try {
-      let res = [];
-      try {
-        res = await mapService.photonSearch(q, null, null, 8);
-      } catch {
+    setErrored(false);
+    // Geocoding is tried in order of reliability:
+    //   1. Backend autocomplete proxy  — server-side Photon→Nominatim, no
+    //      browser CORS, sets a valid User-Agent, friendlier to rate limits.
+    //   2. Direct Photon (browser)     — fast but flaky / rate-limited.
+    //   3. Direct Nominatim (browser)  — last resort.
+    // Both schedule (pickup/dropoff) and ride search (from/to) depend on this
+    // box returning lat/lng, so a single robust path fixes both surfaces.
+    const sources = [
+      async () => {
+        const data = await mapService.autocomplete(q);
+        return (data.results || []).map((r) => ({
+          id:       r.id,
+          name:     r.name || (r.display || '').split(',')[0] || '',
+          display:  r.display || r.name || '',
+          lat:      r.lat,
+          lng:      r.lng,
+          category: r.category || 'address',
+        }));
+      },
+      async () => mapService.photonSearch(q, null, null, 8),
+      async () => {
         const nom = await mapService.nominatimSearch(q, 8);
-        res = nom.map((r) => ({
+        return nom.map((r) => ({
           id:       r.place_id,
           name:     (r.display_name || '').split(',')[0] || '',
           display:  r.display_name || '',
@@ -78,15 +97,27 @@ const SearchBox = ({
           lng:      parseFloat(r.lon),
           category: r.class || 'address',
         }));
+      },
+    ];
+
+    let res = [];
+    let lastErr = null;
+    for (const fetchFrom of sources) {
+      try {
+        const out = await fetchFrom();
+        // Keep only results that actually carry coordinates — a result with
+        // no lat/lng is useless to the schedule/search forms downstream.
+        res = (out || []).filter((r) => Number.isFinite(r.lat) && Number.isFinite(r.lng));
+        if (res.length) break;
+      } catch (err) {
+        lastErr = err;
       }
-      setResults(res.slice(0, 8));
-      setOpen(res.length > 0);
-    } catch (err) {
-      console.error('Search error:', err);
-      setResults([]);
-    } finally {
-      setLoading(false);
     }
+
+    setResults(res.slice(0, 8));
+    setOpen(res.length > 0);
+    setErrored(res.length === 0 && lastErr != null);
+    setLoading(false);
   }, []);
 
   const debouncedSearch = useDebounce(performSearch, 350);
@@ -176,6 +207,12 @@ const SearchBox = ({
           )}
         </div>
       </div>
+
+      {errored && !loading && query.trim().length >= 2 && (
+        <p className="mt-1 text-xs text-amber-500">
+          Couldn't reach the location service. Check your connection and try again.
+        </p>
+      )}
 
       {open && results.length > 0 && (
         <div

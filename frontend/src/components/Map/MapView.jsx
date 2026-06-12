@@ -44,6 +44,26 @@ const MapController = ({ onMapClick }) => {
     mapRef.current = map;
   }, [map, mapRef]);
 
+  // Leaflet caches its container's pixel size at init and does NOT recompute
+  // it on its own. When the viewport changes — mobile orientation flip, the
+  // iOS/Android URL bar collapsing, or the side panel opening/closing — the
+  // map renders at a stale size (grey tiles / wrong aspect ratio). Force a
+  // recompute on those events. rAF lets the layout settle first.
+  useEffect(() => {
+    let raf = null;
+    const recalc = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => map.invalidateSize());
+    };
+    window.addEventListener('resize', recalc);
+    window.addEventListener('orientationchange', recalc);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('resize', recalc);
+      window.removeEventListener('orientationchange', recalc);
+    };
+  }, [map]);
+
   // Trigger POI fetch when the map zooms in enough or pans far enough.
   const maybeFetchPOIs = () => {
     const zoom = map.getZoom();

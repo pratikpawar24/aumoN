@@ -31,29 +31,36 @@ exports.createRequest = async (req, res, next) => {
       status: 'pending',
     });
 
-    // Immediately try to find matches
-    const candidates = await carpoolMatchingService.findMatches(request);
+    // Immediately try to find matches. This is best-effort: a failure in the
+    // matching pipeline (AI service down, geometry edge case, etc.) must NOT
+    // fail the whole request — the ride is already saved above, so we swallow
+    // matching errors and just return the unmatched request.
     let matchResult = null;
+    try {
+      const candidates = await carpoolMatchingService.findMatches(request);
 
-    if (candidates.length > 0) {
-      const allRequests = [request, ...candidates];
-      const aiResult = await carpoolMatchingService.matchViaAI(allRequests);
+      if (candidates.length > 0) {
+        const allRequests = [request, ...candidates];
+        const aiResult = await carpoolMatchingService.matchViaAI(allRequests);
 
-      if (aiResult.groups && aiResult.groups.length > 0) {
-        const group = aiResult.groups[0];
-        const reqIds = group.passengers.map((p) => p.id).filter(Boolean);
-        const requestDocs = await CarpoolRequest.find({ _id: { $in: reqIds } });
+        if (aiResult.groups && aiResult.groups.length > 0) {
+          const group = aiResult.groups[0];
+          const reqIds = group.passengers.map((p) => p.id).filter(Boolean);
+          const requestDocs = await CarpoolRequest.find({ _id: { $in: reqIds } });
 
-        if (requestDocs.length >= 2) {
-          const match = await carpoolMatchingService.createMatchDocument(group, requestDocs);
-          await carpoolMatchingService.updateRequestStatuses(
-            requestDocs.map((r) => r._id),
-            match._id,
-            requestDocs.map((r) => r.userId)
-          );
-          matchResult = match;
+          if (requestDocs.length >= 2) {
+            const match = await carpoolMatchingService.createMatchDocument(group, requestDocs);
+            await carpoolMatchingService.updateRequestStatuses(
+              requestDocs.map((r) => r._id),
+              match._id,
+              requestDocs.map((r) => r.userId)
+            );
+            matchResult = match;
+          }
         }
       }
+    } catch (matchErr) {
+      console.error('Carpool matching failed (request still saved):', matchErr.message);
     }
 
     res.status(201).json({

@@ -3,7 +3,7 @@ import SearchBox    from '../Map/SearchBox';
 import { Spinner }  from '../Common/Loading';
 import { useCarpool } from '../../hooks/useCarpool';
 import { VEHICLE_TYPES } from '../../utils/constants';
-import { Users, Clock, Settings, IndianRupee } from 'lucide-react';
+import { Users, Clock, Settings, IndianRupee, CheckCircle2, X } from 'lucide-react';
 import { haversineDistance } from '../../utils/helpers';
 
 // Quick-and-dirty fare suggestion: ₹4/km for car, ₹2/km for motorcycle, free for bike/walk.
@@ -32,6 +32,7 @@ const ScheduleRide = ({ onSuccess }) => {
     preferences: { genderPreference: 'any', maxWalkDistanceM: 500 },
   });
   const [showPrefs, setShowPrefs] = useState(false);
+  const [confirmation, setConfirmation] = useState(null); // success-modal payload
 
   const update = (k, v) => setForm((p) => ({ ...p, [k]: v }));
   const updatePref = (k, v) =>
@@ -44,6 +45,14 @@ const ScheduleRide = ({ onSuccess }) => {
 
   const isValid = form.pickup && form.dropoff && form.departureTime;
 
+  // Human-readable hint for whatever is still missing, so the disabled submit
+  // button is never a mystery.
+  const missing = [
+    !form.pickup && 'a pickup location',
+    !form.dropoff && 'a drop-off location',
+    !form.departureTime && 'a departure time',
+  ].filter(Boolean);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!isValid) return;
@@ -53,7 +62,13 @@ const ScheduleRide = ({ onSuccess }) => {
       price: form.price === '' ? null : Number(form.price),
     };
     const result = await createRequest(payload);
-    if (result) onSuccess?.(result);
+    if (result) setConfirmation(result);
+  };
+
+  const closeConfirmation = () => {
+    const r = confirmation;
+    setConfirmation(null);
+    onSuccess?.(r);
   };
 
   return (
@@ -237,6 +252,12 @@ const ScheduleRide = ({ onSuccess }) => {
         </div>
       )}
 
+      {!isValid && missing.length > 0 && (
+        <p className="text-xs text-amber-500">
+          Add {missing.join(', ').replace(/, ([^,]*)$/, ' and $1')} to schedule.
+        </p>
+      )}
+
       <button type="submit" disabled={!isValid || loading}
               className="w-full py-3 min-h-[48px] bg-green-500 hover:bg-green-600
                          disabled:opacity-50 disabled:cursor-not-allowed
@@ -244,7 +265,54 @@ const ScheduleRide = ({ onSuccess }) => {
                          flex items-center justify-center gap-2">
         {loading ? <><Spinner size="sm" color="white" />Submitting...</> : '🚗 Schedule Ride'}
       </button>
+
+      {confirmation && (
+        <ConfirmationModal data={confirmation} form={form} onClose={closeConfirmation} />
+      )}
     </form>
+  );
+};
+
+// Success modal shown after a ride is scheduled. Surfaces either the match
+// result or a "looking for matches" state, and the key ride details.
+const ConfirmationModal = ({ data, form, onClose }) => {
+  const matched = !!data?.match;
+  const others = matched ? Math.max(0, (data.match.passengerCount || 1) - 1) : 0;
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4
+                    bg-black/60" onClick={onClose}>
+      <div className="relative w-full max-w-sm rounded-2xl border aumo-border aumo-bg-surface
+                      p-6 text-center space-y-3 animate-fade-in"
+           onClick={(e) => e.stopPropagation()}>
+        <button type="button" onClick={onClose}
+                className="absolute top-3 right-3 aumo-text-subtle hover:aumo-text-primary">
+          <X className="w-4 h-4" />
+        </button>
+        <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto" />
+        <h3 className="text-lg font-bold aumo-text-primary">
+          {matched ? `Matched with ${others} rider${others === 1 ? '' : 's'}! 🎉` : 'Ride scheduled!'}
+        </h3>
+        <p className="text-sm aumo-text-subtle">
+          {matched
+            ? 'We found a carpool group for you. Check History to coordinate.'
+            : "You're all set. We'll notify you the moment a match is found."}
+        </p>
+        <div className="text-left text-xs aumo-text-subtle rounded-xl border aumo-border p-3 space-y-1">
+          <div className="flex gap-2"><span className="w-2 h-2 mt-1 rounded-full bg-green-500" />
+            <span className="aumo-text-primary truncate">{form.pickup?.address || 'Pickup'}</span></div>
+          <div className="flex gap-2"><span className="w-2 h-2 mt-1 rounded-full bg-red-500" />
+            <span className="aumo-text-primary truncate">{form.dropoff?.address || 'Drop-off'}</span></div>
+          {form.departureTime && (
+            <div className="pt-1">🕑 {new Date(form.departureTime).toLocaleString()}</div>
+          )}
+        </div>
+        <button type="button" onClick={onClose}
+                className="w-full py-3 min-h-[44px] bg-green-500 hover:bg-green-600
+                           text-white font-semibold rounded-xl transition-all">
+          {matched ? 'View in History' : 'Got it'}
+        </button>
+      </div>
+    </div>
   );
 };
 
