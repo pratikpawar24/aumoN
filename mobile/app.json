@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "AumoN",
+    "slug": "aumon-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0f172a",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0f172a"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.aumon.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "AumoN uses your location to plan routes and track trips."
+      }
+    },
+    "android": {
+      "package": "com.aumon.app",
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET"
+      ],
+      "config": {
+        "googleMaps": {
+          "apiKey": "REPLACE_WITH_YOUR_GOOGLE_MAPS_ANDROID_API_KEY"
+        }
+      }
+    },
+    "plugins": [
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "AumoN uses your location to plan routes and track trips."
+        }
+      ]
+    ],
+    "extra": {
+      "apiUrl": "https://aumo-backend-h82m.onrender.com"
+    }
+  }
+}
