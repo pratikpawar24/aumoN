@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image, ActivityIndicator, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -21,12 +21,18 @@ const VEHICLES = [
 ];
 
 const ProfileScreen = () => {
-  const { user, updateUser, uploadAvatar, logout } = useAuth();
+  const { user, updateUser, uploadAvatar, refreshUser, logout } = useAuth();
   const [vehicle, setVehicle] = useState(user?.vehicleType || 'car');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const dirty = vehicle !== (user?.vehicleType || 'car');
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try { await refreshUser(); } catch (_) {} finally { setRefreshing(false); }
+  };
 
   const pickAvatar = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -75,7 +81,10 @@ const ProfileScreen = () => {
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
         <View style={styles.header}>
           <TouchableOpacity style={styles.avatar} onPress={pickAvatar} disabled={uploading} activeOpacity={0.8}>
             {avatarUri(user?.avatar) ? (

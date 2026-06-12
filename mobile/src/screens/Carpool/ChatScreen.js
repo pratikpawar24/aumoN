@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import { useAuth } from '../../context/AuthContext';
+import { useUnread } from '../../context/UnreadContext';
 import carpoolService from '../../services/carpoolService';
 import { getSocket } from '../../services/socket';
 import { apiError } from '../../utils/helpers';
@@ -16,6 +17,7 @@ const samePeer = (a, b) => String(a ?? '') === String(b ?? '');
 // passenger talks in their own thread, a driver opens a specific passenger's.
 const ChatScreen = ({ ride, peerId, peerName, onClose, onConfirmed }) => {
   const { user } = useAuth();
+  const { markSeen } = useUnread();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
@@ -47,6 +49,11 @@ const ChatScreen = ({ ride, peerId, peerName, onClose, onConfirmed }) => {
       socket.off('chat-message', handler);
       socket.emit('leave-chat-room', rideId);
     };
+  }, [rideId, effectivePeerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Opening the thread marks it read (clears its share of the Carpool badge).
+  useEffect(() => {
+    if (rideId) markSeen(rideId, effectivePeerId);
   }, [rideId, effectivePeerId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {

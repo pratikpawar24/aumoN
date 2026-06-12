@@ -3,6 +3,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../theme/theme';
 import { useAuth } from '../context/AuthContext';
+import { useUnread } from '../context/UnreadContext';
 import MapScreen from '../screens/Map/MapScreen';
 import CarpoolScreen from '../screens/Carpool/CarpoolScreen';
 import DashboardScreen from '../screens/Dashboard/DashboardScreen';
@@ -21,6 +22,7 @@ const ICONS = {
 
 const MainNavigator = () => {
   const { user } = useAuth();
+  const { count } = useUnread();
   const isAdmin = user?.role === 'admin_master' || user?.role === 'admin_secondary';
   return (
   <Tab.Navigator
@@ -42,7 +44,11 @@ const MainNavigator = () => {
     })}
   >
     <Tab.Screen name="Map" component={MapScreen} />
-    <Tab.Screen name="Carpool" component={CarpoolScreen} />
+    <Tab.Screen
+      name="Carpool"
+      component={CarpoolScreen}
+      options={{ tabBarBadge: count > 0 ? count : undefined, tabBarBadgeStyle: { backgroundColor: colors.primary, color: '#04210f' } }}
+    />
     <Tab.Screen name="Dashboard" component={DashboardScreen} />
     <Tab.Screen name="Profile" component={ProfileScreen} />
     {isAdmin && <Tab.Screen name="Admin" component={AdminScreen} />}

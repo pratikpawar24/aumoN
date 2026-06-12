@@ -12,6 +12,7 @@ const AdminScreen = () => {
   const [users, setUsers] = useState([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const timer = useRef(null);
 
@@ -35,6 +36,12 @@ const AdminScreen = () => {
   }, [loadStats, loadUsers]);
 
   useEffect(() => { initial(); }, [initial]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([loadStats(), loadUsers(search.trim())]);
+    setRefreshing(false);
+  }, [loadStats, loadUsers, search]);
 
   const onSearch = (t) => {
     setSearch(t);
@@ -80,7 +87,7 @@ const AdminScreen = () => {
         data={users}
         keyExtractor={(u) => u._id}
         contentContainerStyle={{ padding: spacing.lg, gap: 10 }}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={initial} tintColor={colors.primary} />}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>
             <Text style={styles.title}>🛡️ Admin console</Text>
