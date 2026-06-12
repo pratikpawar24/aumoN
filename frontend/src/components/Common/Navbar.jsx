@@ -91,8 +91,13 @@ const Navbar = () => {
                 </button>
 
                 {userMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 rounded-xl shadow-xl
-                                  border aumo-border aumo-bg-popover py-1 z-50">
+                  <div
+                    className="absolute right-0 mt-2 w-48 rounded-xl shadow-2xl
+                               border aumo-border py-1 z-[1100]"
+                    // Explicit opaque background so the map never shows through
+                    // the menu (the nav's backdrop-blur was bleeding the map in).
+                    style={{ background: '#1e293b', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+                  >
                     <div className="px-4 py-2 border-b aumo-border">
                       <p className="text-sm font-medium aumo-text-primary truncate">{user?.name}</p>
                       <p className="text-xs aumo-text-subtle truncate">{user?.email}</p>
