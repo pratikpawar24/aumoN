@@ -12,8 +12,28 @@ export const PROFILE_PAIR = {
   balanced: 'distance',
 };
 
+// Combine a primary route with extra candidates (the complementary mode and
+// any API-provided alternatives) into a de-duplicated list of at most 3
+// routes — the set drawn on the map and shown as selectable cards.
+const buildRouteOptions = (primaryRoute, extras = []) => {
+  const seen = new Set();
+  const out = [];
+  for (const r of [primaryRoute, ...extras]) {
+    if (!r || !(r.route_geometry?.length || r.routeGeometry?.length)) continue;
+    const key = `${r.profile || r.label}-${r.total_distance_km}-${r.total_time_minutes}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push(r);
+    if (out.length >= 3) break;
+  }
+  return out;
+};
+
 export const useRoute = () => {
-  const { setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData } = useMapContext();
+  const {
+    setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData,
+    setRouteOptions, setSelectedRouteIdx,
+  } = useMapContext();
   const [loading,        setLoading]        = useState(false);
   const [error,          setError]          = useState(null);
   const [routeResult,    setRouteResult]    = useState(null);
@@ -33,6 +53,9 @@ export const useRoute = () => {
       if (result.primary_route) {
         setCurrentRoute(result.primary_route);
         setAlternatives(result.alternatives || []);
+        const options3 = buildRouteOptions(result.primary_route, result.alternatives || []);
+        setRouteOptions(options3);
+        setSelectedRouteIdx(0);
         setRouteResult(result);
         // Surface the bbox-grid traffic overlay returned by the AI service so
         // the existing TrafficLayer renders it without a separate fetch.
@@ -65,7 +88,7 @@ export const useRoute = () => {
     } finally {
       setLoading(false);
     }
-  }, [setCurrentRoute, setAlternatives, setTrafficData]);
+  }, [setCurrentRoute, setAlternatives, setTrafficData, setRouteOptions, setSelectedRouteIdx]);
 
   // Calculate the selected mode + its pair in parallel. The selected one
   // becomes currentRoute (drawn solid); the pair becomes pairedRoute
@@ -93,6 +116,13 @@ export const useRoute = () => {
       if (primary?.primary_route) {
         setCurrentRoute(primary.primary_route);
         setAlternatives(primary.alternatives || []);
+        // 3-route set: selected mode + complementary mode + one API alternative.
+        const options3 = buildRouteOptions(primary.primary_route, [
+          paired?.primary_route,
+          ...(primary.alternatives || []),
+        ]);
+        setRouteOptions(options3);
+        setSelectedRouteIdx(0);
         setRouteResult(primary);
         if (primary.traffic_overlay?.length) {
           setTrafficData({ segments: primary.traffic_overlay });
@@ -119,7 +149,7 @@ export const useRoute = () => {
     } finally {
       setLoading(false);
     }
-  }, [setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData]);
+  }, [setCurrentRoute, setPairedRoute, setAlternatives, setTrafficData, setRouteOptions, setSelectedRouteIdx]);
 
   const loadHistory = useCallback(async (page = 1, filters = {}) => {
     setHistoryLoading(true);

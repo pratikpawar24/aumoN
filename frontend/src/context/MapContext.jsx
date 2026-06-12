@@ -16,6 +16,11 @@ export const MapProvider = ({ children }) => {
   // Pair table: carbon ↔ time, distance ↔ balanced.
   const [pairedRoute, setPairedRoute]   = useState(null);
   const [alternatives, setAlternatives] = useState([]);
+  // The full set of routes shown on the map at once (primary + alternatives,
+  // up to 3). `selectedRouteIdx` is the bold/primary one; tapping a card or
+  // polyline promotes that route to selected.
+  const [routeOptions, setRouteOptions]       = useState([]);
+  const [selectedRouteIdx, setSelectedRouteIdx] = useState(0);
   const [pois, setPois]                 = useState([]);
   const [busStops, setBusStops]         = useState([]);
   const [buildings, setBuildings]       = useState([]);
@@ -35,10 +40,18 @@ export const MapProvider = ({ children }) => {
     setMapZoom(zoom);
   }, []);
 
+  // Promote one of the route options to the bold/selected route.
+  const selectRoute = useCallback((idx, route) => {
+    setSelectedRouteIdx(idx);
+    if (route) setCurrentRoute(route);
+  }, []);
+
   const clearRoute = useCallback(() => {
     setCurrentRoute(null);
     setPairedRoute(null);
     setAlternatives([]);
+    setRouteOptions([]);
+    setSelectedRouteIdx(0);
   }, []);
 
   const clearAll = useCallback(() => {
@@ -47,6 +60,8 @@ export const MapProvider = ({ children }) => {
     setCurrentRoute(null);
     setPairedRoute(null);
     setAlternatives([]);
+    setRouteOptions([]);
+    setSelectedRouteIdx(0);
   }, []);
 
   return (
@@ -61,6 +76,9 @@ export const MapProvider = ({ children }) => {
         currentRoute, setCurrentRoute,
         pairedRoute, setPairedRoute,
         alternatives, setAlternatives,
+        routeOptions, setRouteOptions,
+        selectedRouteIdx, setSelectedRouteIdx,
+        selectRoute,
         pois, setPois,
         busStops, setBusStops,
         buildings, setBuildings,

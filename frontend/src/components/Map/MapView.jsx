@@ -90,13 +90,23 @@ const MapController = ({ onMapClick }) => {
 const MapView = ({ onMapClick, className = '' }) => {
   const {
     mapStyle,
-    currentRoute, pairedRoute,
+    currentRoute,
+    routeOptions, selectedRouteIdx,
     origin, destination,
     pois, busStops, buildings,
     showPOIs, showBusStops, showBuildings,
     trafficData, showTraffic,
     userLocation,
   } = useMapContext();
+
+  // Draw every route option at once. Render the non-selected ones first and
+  // the selected one last so the bold polyline sits on top. Falls back to the
+  // single currentRoute when no option set has been built yet.
+  const drawnRoutes = (routeOptions && routeOptions.length)
+    ? routeOptions
+        .map((r, i) => ({ r, i }))
+        .sort((a, b) => (a.i === selectedRouteIdx ? 1 : 0) - (b.i === selectedRouteIdx ? 1 : 0))
+    : (currentRoute ? [{ r: currentRoute, i: 0 }] : []);
 
   const tileUrl    = MAP_TILES[mapStyle]    || MAP_TILES.dark;
   const tileAttrib = mapStyle === 'satellite'
@@ -127,15 +137,17 @@ const MapView = ({ onMapClick, className = '' }) => {
           />
         )}
 
-        {/* Two routes drawn at a time: the selected mode (solid) and its
-            paired complementary mode (dotted) for at-a-glance comparison.
-            Pair table: carbon ↔ time, distance ↔ balanced. */}
-        {pairedRoute && (
-          <RouteLayer route={pairedRoute} isSelected={false} isAlternative />
-        )}
-        {currentRoute && (
-          <RouteLayer route={currentRoute} isSelected />
-        )}
+        {/* Up to 3 routes drawn at once: the selected one bold, the others
+            semi-transparent + dashed. Tapping an alternative promotes it. */}
+        {drawnRoutes.map(({ r, i }) => (
+          <RouteLayer
+            key={`route-${i}`}
+            route={r}
+            isSelected={i === selectedRouteIdx}
+            isAlternative={i !== selectedRouteIdx}
+            routeIndex={i}
+          />
+        ))}
 
         <MarkerLayer
           origin={origin}

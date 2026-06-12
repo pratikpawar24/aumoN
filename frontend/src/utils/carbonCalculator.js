@@ -1,5 +1,54 @@
 import { EMISSION_FACTORS } from './constants';
 
+/**
+ * CO₂ Emission Calculation — carpool savings.
+ *
+ * India-average tailpipe factors (g CO₂ / km). Kept as the single source of
+ * truth for the "saved by sharing" number shown in the carpool UI. Mirrors
+ * backend/src/utils/emissionFactors.js so client and server agree.
+ */
+export const CARPOOL_EMISSION_FACTORS = {
+  car_petrol: 192,   // average Indian car (petrol)
+  car_diesel: 171,   // average Indian car (diesel)
+  car_cng:    166,   // CNG vehicle
+  car:        192,   // app enum → petrol average
+  bike:       104,   // two-wheeler
+  motorcycle: 104,
+  ev:         0,     // electric vehicle (0 tailpipe)
+  electric:   0,
+  default:    180,   // unknown vehicle
+};
+
+/**
+ * CO₂ saved by carpooling instead of each passenger driving alone.
+ *
+ *   individual = distance × EF × numPassengers   (everyone drives solo)
+ *   carpool    = distance × EF                    (one shared vehicle)
+ *   saved      = individual − carpool = distance × EF × (numPassengers − 1)
+ *
+ * @returns {{ co2SavedKg, percentageReduction, individualEmissions, carpoolEmissions }}
+ *          emissions are in kg CO₂; strings fixed to 2/1 decimals for display.
+ */
+export const calculateCO2Saved = (distance, vehicleType, numPassengers = 1) => {
+  const emissionPerKm =
+    CARPOOL_EMISSION_FACTORS[vehicleType] ?? CARPOOL_EMISSION_FACTORS.default;
+  const n = Math.max(1, numPassengers);
+
+  const individualEmissions = distance * emissionPerKm * n; // grams
+  const carpoolEmissions = distance * emissionPerKm;         // grams
+  const co2SavedGrams = Math.max(0, individualEmissions - carpoolEmissions);
+
+  const percentageReduction =
+    individualEmissions > 0 ? (co2SavedGrams / individualEmissions) * 100 : 0;
+
+  return {
+    co2SavedKg: (co2SavedGrams / 1000).toFixed(2),
+    percentageReduction: percentageReduction.toFixed(1),
+    individualEmissions: (individualEmissions / 1000).toFixed(2),
+    carpoolEmissions: (carpoolEmissions / 1000).toFixed(2),
+  };
+};
+
 const CONGESTION_MULTIPLIERS = {
   free_flow: 1.0,
   moderate:  1.3,

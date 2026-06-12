@@ -30,11 +30,13 @@ export const VEHICLE_TYPES = [
   { value: 'walk',       label: 'Walking',      icon: '🚶', emission: 0   },
 ];
 
+// Only two optimization modes are exposed in the UI: Eco (minimise CO₂) and
+// Fastest (minimise time). "Shortest" and "Balanced" were removed for a
+// simpler, mobile-friendly choice. The backend still understands the other
+// profiles, so alternative routes may still be labelled with them.
 export const OPTIMIZE_OPTIONS = [
-  { value: 'carbon',   label: 'Eco Route',      icon: '🌿', color: '#22c55e', desc: 'Minimize CO₂' },
-  { value: 'time',     label: 'Fastest Route',  icon: '⚡', color: '#ef4444', desc: 'Minimize time' },
-  { value: 'distance', label: 'Shortest Route', icon: '📏', color: '#3b82f6', desc: 'Minimize distance' },
-  { value: 'balanced', label: 'Balanced',       icon: '⚖️', color: '#f59e0b', desc: 'Balance all' },
+  { value: 'carbon', label: 'Eco',     icon: '🍃', color: '#22c55e', desc: 'Lowest emissions' },
+  { value: 'time',   label: 'Fastest', icon: '⚡', color: '#ef4444', desc: 'Shortest time' },
 ];
 
 export const ROUTE_COLORS = {

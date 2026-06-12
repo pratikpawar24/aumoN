@@ -2,6 +2,7 @@ const axios = require('axios');
 const { config } = require('../config/env');
 const CarpoolRequest = require('../models/CarpoolRequest');
 const CarpoolMatch = require('../models/CarpoolMatch');
+const { getCarpoolEF } = require('../utils/emissionFactors');
 
 class CarpoolMatchingService {
   // ── Find compatible requests ───────────────────────────────────────────────
@@ -119,11 +120,17 @@ class CarpoolMatchingService {
       };
     });
 
+    // Emission factor from the shared vehicle (the driver's, falling back to
+    // any request's, then 'car'). Carpool savings = everyone-drives-alone
+    // emissions minus the single shared-vehicle emissions.
+    const driverDoc = requestDocs.find((r) => r.role === 'driver') || requestDocs[0];
+    const ef = getCarpoolEF(driverDoc?.vehicleType || 'car');
+
     const totalDist = this._estimateSharedDistance(group.passengers);
-    const emissionG = totalDist * 150;
+    const emissionG = totalDist * ef;
     const n = group.passengers.length;
     const individualTotal = group.passengers.reduce((sum, p) => {
-      return sum + this._haversine(p.pickup.lat, p.pickup.lng, p.dropoff.lat, p.dropoff.lng) * 150;
+      return sum + this._haversine(p.pickup.lat, p.pickup.lng, p.dropoff.lat, p.dropoff.lng) * ef;
     }, 0);
     const co2Saved = Math.max(0, individualTotal - emissionG);
     const savingsPct = individualTotal > 0 ? Math.round((co2Saved / individualTotal) * 100) : 0;

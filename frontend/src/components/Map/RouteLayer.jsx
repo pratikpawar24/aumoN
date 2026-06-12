@@ -2,6 +2,7 @@ import React, { useEffect, useMemo } from 'react';
 import { Polyline, useMap } from 'react-leaflet';
 import { getRouteStyle, fitMapToRoute } from '../../utils/mapUtils';
 import { CONGESTION_COLORS } from '../../utils/constants';
+import { useMapContext } from '../../context/MapContext';
 
 const toLatLng = (pt) => {
   if (!pt) return null;
@@ -34,11 +35,17 @@ const buildCongestionSegments = (latLngs, samples) => {
   return segs.length ? segs : null;
 };
 
-const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
+const RouteLayer = ({ route, isSelected = false, isAlternative = false, routeIndex = null }) => {
   const map = useMap();
+  const { selectRoute } = useMapContext();
 
   const profile  = route?.profile || 'balanced';
   const trafficSamples = route?.traffic_along_route;
+
+  // Tapping a non-selected route promotes it. No-op for the selected one.
+  const selectHandlers = (!isSelected && routeIndex != null)
+    ? { click: () => selectRoute(routeIndex, route) }
+    : undefined;
 
   const latLngs = useMemo(() => {
     const geometry = route?.route_geometry || route?.routeGeometry || [];
@@ -86,15 +93,26 @@ const RouteLayer = ({ route, isSelected = false, isAlternative = false }) => {
   }
 
   return (
-    <Polyline
-      positions={latLngs}
-      pathOptions={{
-        ...baseStyle,
-        weight:    isSelected ? 7 : 4,
-        opacity:   isSelected ? 0.95 : 0.45,
-        dashArray: isAlternative && !isSelected ? '10,6' : undefined,
-      }}
-    />
+    <>
+      {/* Invisible fat hit-area makes thin alternative routes easy to tap. */}
+      {selectHandlers && (
+        <Polyline
+          positions={latLngs}
+          pathOptions={{ color: '#000', weight: 16, opacity: 0, lineCap: 'round' }}
+          eventHandlers={selectHandlers}
+        />
+      )}
+      <Polyline
+        positions={latLngs}
+        eventHandlers={selectHandlers}
+        pathOptions={{
+          ...baseStyle,
+          weight:    isSelected ? 7 : 4,
+          opacity:   isSelected ? 0.95 : 0.45,
+          dashArray: isAlternative && !isSelected ? '10,6' : undefined,
+        }}
+      />
+    </>
   );
 };
 

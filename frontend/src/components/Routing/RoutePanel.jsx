@@ -3,14 +3,15 @@ import { Navigation, Leaf, ChevronDown, ChevronUp, Locate } from 'lucide-react';
 import SearchBox     from '../Map/SearchBox';
 import CarbonScore   from './CarbonScore';
 import RouteDetails  from './RouteDetails';
-import AlternativeRoutes from './AlternativeRoutes';
+import RouteOptions  from './RouteOptions';
 import StartTripButton from './StartTripButton';
 import TripSummary from './TripSummary';
 import { useMapContext } from '../../context/MapContext';
 import { useRoute }      from '../../hooks/useRoute';
 import { useMap }        from '../../hooks/useMap';
+import { useAuth }       from '../../hooks/useAuth';
 import { useTripTracker } from '../../hooks/useTripTracker';
-import { VEHICLE_TYPES, OPTIMIZE_OPTIONS } from '../../utils/constants';
+import { OPTIMIZE_OPTIONS } from '../../utils/constants';
 import { Spinner }   from '../Common/Loading';
 import mapService    from '../../services/mapService';
 import toast         from 'react-hot-toast';
@@ -19,13 +20,16 @@ const RoutePanel = () => {
   const {
     origin, setOrigin,
     destination, setDestination,
-    currentRoute, alternatives,
+    currentRoute,
   } = useMapContext();
   const { calculateRoute, calculateBoth, loading } = useRoute();
   const { flyTo, loadPOIs }         = useMap();
   const { setUserLocation } = useMapContext();
+  const { user } = useAuth();
 
-  const [vehicleType,    setVehicleType]    = useState('car');
+  // Vehicle type now comes from the user's profile rather than a map control —
+  // the map UI only chooses the optimization mode (Eco / Fastest).
+  const vehicleType = user?.vehicleType || 'car';
   const [optimizeFor,    setOptimizeFor]    = useState('carbon');
   const [showAdvanced,   setShowAdvanced]   = useState(false);
   const [departureTime,  setDepartureTime]  = useState('');
@@ -197,43 +201,14 @@ const RoutePanel = () => {
           />
         </div>
 
-        {/* Vehicle type */}
-        <div>
-          <label className="text-xs font-medium text-slate-400 mb-2 block">
-            Vehicle
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
-            {VEHICLE_TYPES.map((v) => (
-              <button
-                key={v.value}
-                onClick={() => setVehicleType(v.value)}
-                className={`flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl
-                            border text-xs font-medium transition-all
-                            ${vehicleType === v.value
-                              ? 'border-green-500 text-green-400'
-                              : 'border-white/10 text-slate-400 hover:border-white/30'}`}
-                style={vehicleType === v.value
-                  ? { background: 'rgba(34,197,94,0.2)' }
-                  : { background: 'rgba(30,41,59,0.8)' }}
-              >
-                <span className="text-base">{v.icon}</span>
-                <span className="leading-tight text-center">
-                  {v.label.split(' ')[0]}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Optimize for. Clicking a mode after a route already exists
-            triggers a fresh recalculation in that mode — guarantees all
-            four (eco / fastest / shortest / balanced) get their own
-            request rather than relying on OSRM-returned alternatives. */}
+        {/* Optimize for — only Eco vs Fastest. Clicking a mode after a route
+            already exists triggers a fresh recalculation in that mode plus its
+            complementary mode, so the map always shows comparable routes. */}
         <div>
           <label className="text-xs font-medium text-slate-400 mb-2 block">
             Optimize For
           </label>
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-2">
             {OPTIMIZE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -249,8 +224,8 @@ const RoutePanel = () => {
                     });
                   }
                 }}
-                className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border
-                            text-xs font-medium transition-all
+                className={`flex items-center justify-center gap-2 px-3 py-3 min-h-[48px]
+                            rounded-xl border text-sm font-medium transition-all
                             ${optimizeFor === opt.value
                               ? 'text-white'
                               : 'border-white/10 text-slate-400 hover:border-white/30'}`}
@@ -260,8 +235,8 @@ const RoutePanel = () => {
                       color: opt.color }
                   : { background: 'rgba(30,41,59,0.8)' }}
               >
-                <span>{opt.icon}</span>
-                <span>{opt.label.split(' ')[0]}</span>
+                <span className="text-base">{opt.icon}</span>
+                <span>{opt.label}</span>
               </button>
             ))}
           </div>
@@ -385,9 +360,7 @@ const RoutePanel = () => {
               onStart={handleStartTrip}
               onStop={handleStopTrip}
             />
-            {alternatives.length > 0 && (
-              <AlternativeRoutes alternatives={alternatives} />
-            )}
+            <RouteOptions />
           </div>
         )}
       </div>

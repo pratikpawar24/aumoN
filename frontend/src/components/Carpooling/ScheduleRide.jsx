@@ -3,8 +3,9 @@ import SearchBox    from '../Map/SearchBox';
 import { Spinner }  from '../Common/Loading';
 import { useCarpool } from '../../hooks/useCarpool';
 import { VEHICLE_TYPES } from '../../utils/constants';
-import { Users, Clock, Settings, IndianRupee, CheckCircle2, X } from 'lucide-react';
+import { Users, Clock, Settings, IndianRupee, CheckCircle2, X, Leaf } from 'lucide-react';
 import { haversineDistance } from '../../utils/helpers';
+import { calculateCO2Saved } from '../../utils/carbonCalculator';
 
 // Quick-and-dirty fare suggestion: ₹4/km for car, ₹2/km for motorcycle, free for bike/walk.
 const suggestPrice = (pickup, dropoff, vehicleType, role) => {
@@ -278,6 +279,24 @@ const ScheduleRide = ({ onSuccess }) => {
 const ConfirmationModal = ({ data, form, onClose }) => {
   const matched = !!data?.match;
   const others = matched ? Math.max(0, (data.match.passengerCount || 1) - 1) : 0;
+
+  // CO₂ impact. When already matched, show the real saved figure from the
+  // match. Otherwise show the *potential* saving if a driver fills their seats
+  // (occupants = seats offered + the driver), using the shared formula.
+  let co2 = null;
+  if (matched && data.match.co2SavedG != null) {
+    co2 = {
+      savedKg: (data.match.co2SavedG / 1000).toFixed(2),
+      pct: data.match.savingsPercent != null ? Math.round(data.match.savingsPercent) : null,
+      potential: false,
+    };
+  } else if (form.role === 'driver' && form.pickup && form.dropoff) {
+    const km = haversineDistance(form.pickup.lat, form.pickup.lng, form.dropoff.lat, form.dropoff.lng);
+    const occupants = Math.max(2, (Number(form.seatsAvailable) || 1) + 1);
+    const r = calculateCO2Saved(km, form.vehicleType, occupants);
+    co2 = { savedKg: r.co2SavedKg, pct: Math.round(r.percentageReduction), potential: true };
+  }
+
   return (
     <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4
                     bg-black/60" onClick={onClose}>
@@ -306,6 +325,25 @@ const ConfirmationModal = ({ data, form, onClose }) => {
             <div className="pt-1">🕑 {new Date(form.departureTime).toLocaleString()}</div>
           )}
         </div>
+
+        {co2 && Number(co2.savedKg) > 0 && (
+          <div className="rounded-xl border border-green-500/30 bg-green-500/10 p-3 text-left">
+            <div className="flex items-center gap-1.5 text-green-500 text-sm font-semibold">
+              <Leaf className="w-4 h-4" />
+              {co2.potential ? 'Potential CO₂ impact' : 'CO₂ impact'}
+            </div>
+            <p className="text-xs aumo-text-primary mt-1">
+              ✓ Saves <span className="font-bold">{co2.savedKg} kg CO₂</span>
+              {co2.pct != null && <> · {co2.pct}% less</>}
+            </p>
+            {co2.potential && (
+              <p className="text-[11px] aumo-text-subtle mt-0.5">
+                if your seats fill up vs everyone driving alone
+              </p>
+            )}
+          </div>
+        )}
+
         <button type="button" onClick={onClose}
                 className="w-full py-3 min-h-[44px] bg-green-500 hover:bg-green-600
                            text-white font-semibold rounded-xl transition-all">
