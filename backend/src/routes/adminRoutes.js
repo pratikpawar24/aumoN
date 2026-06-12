@@ -12,6 +12,7 @@ router.get('/users',           adminController.listUsers);
 router.get('/users/:id',       adminController.getUser);
 router.post('/users/:id/block',   adminController.blockUser);
 router.post('/users/:id/unblock', adminController.unblockUser);
+router.patch('/users/:id/verify', adminController.verifyUser);
 router.delete('/users/:id',    adminController.removeUser);
 router.get('/rides/active',    adminController.activeRides);
 

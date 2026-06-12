@@ -93,7 +93,13 @@ class CarbonService {
   }
 
   async getLeaderboard(limit = 20) {
-    return User.find({ isActive: true })
+    // Only regular users belong on the public green leaderboard — exclude
+    // master and secondary admin accounts (and any blocked users).
+    return User.find({
+      isActive: true,
+      isBlocked: { $ne: true },
+      role: { $nin: ['admin_master', 'admin_secondary'] },
+    })
       .select('name avatar greenScore totalCO2Saved totalTrips vehicleType')
       .sort({ totalCO2Saved: -1, greenScore: -1 })
       .limit(limit)

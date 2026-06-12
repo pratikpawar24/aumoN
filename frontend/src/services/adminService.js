@@ -7,6 +7,7 @@ const adminService = {
   getUser: async (id) => (await api.get(`/api/admin/users/${id}`)).data,
   blockUser: async (id, reason) => (await api.post(`/api/admin/users/${id}/block`, { reason })).data,
   unblockUser: async (id) => (await api.post(`/api/admin/users/${id}/unblock`)).data,
+  verifyUser: async (id) => (await api.patch(`/api/admin/users/${id}/verify`)).data,
   removeUser: async (id) => (await api.delete(`/api/admin/users/${id}`)).data,
   activeRides: async () => (await api.get('/api/admin/rides/active')).data,
 

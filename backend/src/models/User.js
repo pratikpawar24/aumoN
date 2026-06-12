@@ -113,6 +113,15 @@ const userSchema = new mongoose.Schema(
     },
     // Auth
     emailVerified: { type: Boolean, default: false },
+    // Verification audit — set when an admin manually verifies a user, so the
+    // admin UI can show who/when/how rather than just a boolean.
+    verificationMethod: {
+      type: String,
+      enum: ['otp', 'admin_manual', null],
+      default: null,
+    },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    verifiedAt: { type: Date, default: null },
     verificationOtp: { type: String, select: false },
     verificationOtpExpires: { type: Date, select: false },
     verificationLastSentAt: { type: Date, select: false },

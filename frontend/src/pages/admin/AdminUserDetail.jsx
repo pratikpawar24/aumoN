@@ -6,7 +6,7 @@ import {
 } from 'recharts';
 import adminService from '../../services/adminService';
 import { Spinner } from '../../components/Common/Loading';
-import { ShieldOff, ShieldCheck, Trash2, ArrowLeft, Mail, Phone } from 'lucide-react';
+import { ShieldOff, ShieldCheck, Trash2, ArrowLeft, Mail, Phone, BadgeCheck, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const AdminUserDetail = () => {
@@ -59,6 +59,21 @@ const AdminUserDetail = () => {
     navigate('/admin/users');
   };
 
+  const [verifying, setVerifying] = useState(false);
+  const handleVerify = async () => {
+    if (!window.confirm(`Mark ${user.name}'s email as verified? They'll get immediate access to carpool.`)) return;
+    setVerifying(true);
+    try {
+      await adminService.verifyUser(id);
+      toast.success('User verified');
+      load();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not verify user');
+    } finally {
+      setVerifying(false);
+    }
+  };
+
   if (loading || !user) return <div className="flex justify-center py-12"><Spinner /></div>;
 
   return (
@@ -108,6 +123,44 @@ const AdminUserDetail = () => {
             <Trash2 className="w-4 h-4" />Remove
           </button>
         </div>
+      </div>
+
+      {/* Email verification */}
+      <div className="rounded-xl border border-indigo-500/20 p-4 flex flex-wrap items-center gap-3"
+           style={{ background: 'rgba(255,255,255,0.03)' }}>
+        {user.emailVerified ? (
+          <>
+            <BadgeCheck className="w-5 h-5 text-green-400 flex-shrink-0" />
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-green-400">
+                Email Verified
+                {user.verificationMethod === 'admin_manual' && ' (by Admin)'}
+              </p>
+              {user.verificationMethod === 'admin_manual' && (
+                <p className="text-xs text-slate-400">
+                  {user.verifiedBy?.email ? `Verified by: ${user.verifiedBy.email}` : 'Verified by an admin'}
+                  {user.verifiedAt && ` · ${new Date(user.verifiedAt).toLocaleString()}`}
+                </p>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <p className="text-sm font-medium text-amber-400 flex-1 min-w-0">
+              Email not verified
+            </p>
+            <button
+              onClick={handleVerify}
+              disabled={verifying}
+              className="px-3 py-2 min-h-[40px] rounded-lg text-sm text-green-400 bg-green-500/10
+                         hover:bg-green-500/20 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              <BadgeCheck className="w-4 h-4" />
+              {verifying ? 'Verifying…' : 'Mark as Verified'}
+            </button>
+          </>
+        )}
       </div>
 
       {/* Stats */}

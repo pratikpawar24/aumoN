@@ -141,5 +141,6 @@ const sendVerificationOtp = async ({ to, name, otp }) => {
 module.exports = {
   generateOtp,
   sendVerificationOtp,
+  sendMail,
   isConfigured,
 };

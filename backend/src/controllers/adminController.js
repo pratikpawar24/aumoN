@@ -3,8 +3,9 @@ const Ride = require('../models/Ride');
 const Trip = require('../models/Trip');
 const CarpoolRequest = require('../models/CarpoolRequest');
 const AdminLog = require('../models/AdminLog');
+const emailService = require('../services/emailService');
 
-const ADMIN_FIELDS = 'name email mobile avatar role isActive isBlocked blockedAt blockReason vehicleType greenScore totalCO2Saved totalCO2Emitted totalTrips totalDistanceKm carpoolsJoined carpoolsOffered emailVerified createdAt lastLogin';
+const ADMIN_FIELDS = 'name email mobile avatar role isActive isBlocked blockedAt blockReason vehicleType greenScore totalCO2Saved totalCO2Emitted totalTrips totalDistanceKm carpoolsJoined carpoolsOffered emailVerified verificationMethod verifiedBy verifiedAt createdAt lastLogin';
 
 const log = async (req, action, target = {}) => {
   try {
@@ -95,7 +96,9 @@ exports.listUsers = async (req, res, next) => {
 
 exports.getUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).select(ADMIN_FIELDS);
+    const user = await User.findById(req.params.id)
+      .select(ADMIN_FIELDS)
+      .populate('verifiedBy', 'name email');
     if (!user) return res.status(404).json({ success: false, message: 'User not found' });
 
     // Recent ride history (last 50)
@@ -186,6 +189,52 @@ exports.removeUser = async (req, res, next) => {
 
     await log(req, 'user.remove', { type: target.role.startsWith('admin') ? 'admin' : 'user', id: target._id });
     res.json({ success: true, message: 'User removed.' });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Manual email verification ────────────────────────────────────────────────
+// Lets an admin (master or secondary) mark a user's email as verified without
+// the OTP flow — e.g. when a user can't receive the OTP. Records who/when for
+// the audit trail and best-effort notifies the user.
+exports.verifyUser = async (req, res, next) => {
+  try {
+    const target = await User.findById(req.params.id);
+    if (!target) return res.status(404).json({ success: false, message: 'User not found' });
+
+    if (target.emailVerified) {
+      return res.status(400).json({ success: false, message: 'User is already verified.' });
+    }
+
+    target.emailVerified = true;
+    target.verificationMethod = 'admin_manual';
+    target.verifiedBy = req.user._id;
+    target.verifiedAt = new Date();
+    // Clear any pending OTP so it can't be reused.
+    target.verificationOtp = undefined;
+    target.verificationOtpExpires = undefined;
+    await target.save();
+
+    await log(req, 'user.verify', {
+      type: 'user',
+      id: target._id,
+      meta: { email: target.email, method: 'admin_manual' },
+    });
+
+    // Best-effort notification — never fails the request.
+    try {
+      await emailService.sendMail({
+        to: target.email,
+        subject: 'Your AUMO account has been verified ✅',
+        text: `Hi ${target.name || 'there'},\n\nGood news — your AUMO account has been verified by our team. You now have full access, including the carpool features.\n\n— AUMO`,
+        html: `<p>Hi ${target.name || 'there'},</p><p>Good news — your AUMO account has been <strong>verified by our team</strong>. You now have full access, including the carpool features.</p><p>— AUMO</p>`,
+      });
+    } catch (e) {
+      console.warn('Verification notification email skipped:', e.message);
+    }
+
+    res.json({ success: true, user: target.toSafeObject() });
   } catch (err) {
     next(err);
   }
