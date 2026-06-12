@@ -47,7 +47,10 @@
       ]
     ],
     "extra": {
-      "apiUrl": "https://aumo-backend-h82m.onrender.com"
+      "apiUrl": "https://aumo-backend-h82m.onrender.com",
+      "eas": {
+        "projectId": "REPLACE_VIA_eas_init"
+      }
     }
   }
 }

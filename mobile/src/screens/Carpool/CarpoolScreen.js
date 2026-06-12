@@ -1,7 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { View, Text, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, font, radius, spacing } from '../../theme/theme';
+import carpoolService from '../../services/carpoolService';
+import { subscribeChatIntent } from '../../services/notificationIntents';
 import FindRides from './FindRides';
 import ScheduleRide from './ScheduleRide';
 import RideHistory from './RideHistory';
@@ -25,6 +27,21 @@ const CarpoolScreen = () => {
 
   const goHistory = useCallback(() => { setReload((n) => n + 1); setTab('history'); }, []);
   const closeChat = useCallback(() => setChat(null), []);
+
+  // Open the conversation a tapped push notification refers to.
+  useEffect(() => {
+    const unsub = subscribeChatIntent(async (intent) => {
+      setTab('inbox');
+      try {
+        const data = await carpoolService.listThreads();
+        const t = (data.threads || []).find(
+          (x) => String(x.rideId) === String(intent.rideId) && String(x.peerId) === String(intent.peerId)
+        );
+        if (t) setChat({ ride: t.ride, peerId: t.peerId, peerName: t.peer?.name });
+      } catch (_) { /* fall back to the inbox tab */ }
+    });
+    return unsub;
+  }, []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

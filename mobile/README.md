@@ -54,6 +54,26 @@ The map screen renders **OpenStreetMap** tiles with **Leaflet inside a WebView**
 **no Google Maps key and no map API key to configure**, and it runs fine in
 **Expo Go** (no native/dev build needed just for the map).
 
+## Enable push notifications (one command)
+Push tokens need an **EAS project id** tied to your Expo account. The app reads
+it from `app.json → expo.extra.eas.projectId` (currently a placeholder the code
+ignores). To make push work out of the box:
+
+```bash
+cd mobile
+npm install -g eas-cli
+eas login
+eas init        # creates the project and writes the real projectId into app.json
+```
+
+Then build a dev/EAS build (remote push is limited in Expo Go on SDK 51):
+```bash
+eas build -p android --profile development   # or preview for an installable APK
+```
+Tapping a chat/match notification deep-links into the relevant conversation.
+The backend stores the device token (`POST /api/auth/push-token`) and pushes on
+new messages, confirmations and matches.
+
 ## Build an APK
 ```bash
 npm install -g eas-cli

@@ -34,8 +34,10 @@ export const registerForPush = async () => {
       });
     }
 
-    const projectId =
+    const raw =
       Constants.expoConfig?.extra?.eas?.projectId || Constants.easConfig?.projectId;
+    // Ignore the scaffold placeholder — an invalid id would just throw.
+    const projectId = raw && !String(raw).includes('REPLACE') ? raw : undefined;
     const token = await Notifications.getExpoPushTokenAsync(
       projectId ? { projectId } : undefined
     );
