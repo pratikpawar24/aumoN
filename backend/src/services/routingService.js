@@ -115,23 +115,35 @@ class RoutingService {
         ...(excludes.size > 0 ? { exclude: [...excludes].join(',') } : {}),
       };
 
+      // Payload control: a 770 km route with overview=full + steps=true + 3
+      // alternatives is multiple MB — slow to transfer and parse, and it was
+      // making long routes time out / the parallel Eco+Fastest call abort.
+      // "simplified" geometry is plenty to draw the line; turn-by-turn steps
+      // are only worth their weight on short (navigable) trips.
+      const straightKm = this._haversineKm(origin, destination);
+      const wantSteps = straightKm < 120;
+      const baseParams = {
+        overview: 'simplified',
+        geometries: 'geojson',
+        steps: wantSteps,
+        annotations: false,
+      };
+      const osrmTimeout = straightKm > 300 ? 20000 : 12000;
+
       for (const base of OSRM_MIRRORS) {
         if (base.includes('routed-car') && profile !== 'car') continue;
         const url = `${base}${path}`;
         try {
           res = await axios.get(url, {
             params: {
-              overview: 'full',
-              geometries: 'geojson',
-              steps: true,
-              annotations: false,
+              ...baseParams,
               ...profileParams,
             },
             headers: {
               'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
               'Accept': 'application/json',
             },
-            timeout: 10000,
+            timeout: osrmTimeout,
             validateStatus: (s) => s >= 200 && s < 300,
           });
           if (res.data?.routes?.length) break;
@@ -156,17 +168,14 @@ class RoutingService {
           try {
             res = await axios.get(`${base}${path}`, {
               params: {
-                overview: 'full',
-                geometries: 'geojson',
-                steps: true,
-                annotations: false,
+                ...baseParams,
                 alternatives: 3,
               },
               headers: {
                 'User-Agent': 'AUMO-App/2.0 (urban-mobility-optimizer)',
                 'Accept': 'application/json',
               },
-              timeout: 10000,
+              timeout: osrmTimeout,
               validateStatus: (s) => s >= 200 && s < 300,
             });
             if (res.data?.routes?.length) break;
