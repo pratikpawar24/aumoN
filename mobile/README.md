@@ -1,7 +1,7 @@
 # AumoN Mobile (Expo / React Native)
 
 Android (and iOS) app for **AumoN — Sustainable Carpooling**, wired to the live
-backend at `https://aumo-backend-h82m.onrender.com`.
+backend.
 
 > Built as an **Expo managed** app. It talks to the *real* deployed API
 > (JWT-based email verification, `/api/routes/calculate`, `/api/carpool/*`,
