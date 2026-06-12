@@ -43,6 +43,7 @@ const SearchBox = ({
   const [loading, setLoading] = useState(false);
   const [open,    setOpen]    = useState(false);
   const [errored, setErrored] = useState(false);
+  const [activeIdx, setActiveIdx] = useState(0); // keyboard-highlighted result
   const inputRef     = useRef(null);
   const containerRef = useRef(null);
 
@@ -115,6 +116,7 @@ const SearchBox = ({
     }
 
     setResults(res.slice(0, 8));
+    setActiveIdx(0);
     setOpen(res.length > 0);
     setErrored(res.length === 0 && lastErr != null);
     setLoading(false);
@@ -126,6 +128,29 @@ const SearchBox = ({
     const val = e.target.value;
     setQuery(val);
     debouncedSearch(val);
+  };
+
+  // Keyboard support: ↑/↓ to move, Enter to pick the highlighted (first by
+  // default) result, Esc to close. preventDefault on Enter stops the
+  // surrounding form (e.g. Schedule Ride) from submitting.
+  const handleKeyDown = (e) => {
+    if (!open || results.length === 0) {
+      if (e.key === 'Enter') e.preventDefault();
+      return;
+    }
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.min(i + 1, results.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveIdx((i) => Math.max(i - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const pick = results[activeIdx] || results[0];
+      if (pick) handleSelect(pick);
+    } else if (e.key === 'Escape') {
+      setOpen(false);
+    }
   };
 
   const handleSelect = (result) => {
@@ -184,6 +209,7 @@ const SearchBox = ({
           type="text"
           value={query}
           onChange={handleChange}
+          onKeyDown={handleKeyDown}
           onFocus={() => results.length > 0 && setOpen(true)}
           placeholder={placeholder}
           autoComplete="off"
@@ -229,10 +255,11 @@ const SearchBox = ({
             <button
               key={`${result.id || i}_${i}`}
               onClick={() => handleSelect(result)}
+              onMouseEnter={() => setActiveIdx(i)}
               type="button"
-              className="w-full flex items-start gap-3 px-4 py-3 text-left
-                         hover:bg-black/5 dark:hover:bg-white/10 transition-colors
-                         border-b aumo-border last:border-0"
+              className={`w-full flex items-start gap-3 px-4 py-3 text-left transition-colors
+                          border-b aumo-border last:border-0
+                          ${i === activeIdx ? 'bg-white/10' : 'hover:bg-black/5 dark:hover:bg-white/10'}`}
             >
               <div className="mt-0.5 flex-shrink-0">
                 {getCategoryIcon(result.category || '')}

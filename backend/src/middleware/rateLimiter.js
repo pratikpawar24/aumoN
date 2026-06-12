@@ -10,10 +10,12 @@ const createLimiter = (windowMs, max, message) =>
     skip: (req) => req.ip === '127.0.0.1' && process.env.NODE_ENV === 'development',
   });
 
-// General API limiter
+// General API limiter. An active map user fires many POI/geocode/weather
+// calls per pan, so the ceiling is generous; per-feature limiters below keep
+// the hot endpoints in check.
 const apiLimiter = createLimiter(
   15 * 60 * 1000,   // 15 minutes
-  200,
+  600,
   'Too many requests. Please try again in 15 minutes.'
 );
 

@@ -148,8 +148,9 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Indexes
-userSchema.index({ email: 1 });
+// Indexes — note: `email` already gets a unique index from `unique: true`
+// on the field, so we must NOT declare it again here (that triggers the
+// "Duplicate schema index on {email:1}" warning).
 userSchema.index({ greenScore: -1 });
 userSchema.index({ totalCO2Saved: -1 });
 

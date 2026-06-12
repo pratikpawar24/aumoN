@@ -6,9 +6,10 @@ const connectDB = async () => {
 
   while (retries < maxRetries) {
     try {
+      // useNewUrlParser / useUnifiedTopology were removed — they've been no-ops
+      // (and warned) since driver v4. Connection pooling + fast failover tuning
+      // is what actually matters for snappy queries on Render ↔ Atlas.
       const conn = await mongoose.connect(process.env.MONGODB_URI, {
-        useNewUrlParser: true,
-        useUnifiedTopology: true,
         serverSelectionTimeoutMS: 10000,
         socketTimeoutMS: 45000,
         family: 4,

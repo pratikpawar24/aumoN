@@ -10,13 +10,40 @@ const OSRM_MIRRORS = [
 ];
 const ORS_BASE = 'https://api.openrouteservice.org/v2';
 
+// Beyond this straight-line distance we skip the on-demand-graph AI router
+// (which can't build a graph that big) and go straight to OSRM.
+const AI_MAX_KM = 40;
+const AI_TIMEOUT_MS = 8000;
+
 class RoutingService {
   constructor() {
     this.aiServiceUrl = config.aiServiceUrl;
   }
 
-  // ── Primary: AI Service (Hugging Face) ────────────────────────────────────
+  // Straight-line km between two points (for routing decisions).
+  _haversineKm(a, b) {
+    const R = 6371;
+    const toRad = (x) => (x * Math.PI) / 180;
+    const dLat = toRad(b.lat - a.lat);
+    const dLng = toRad(b.lng - a.lng);
+    const s =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
+  }
+
+  // ── Primary router ────────────────────────────────────────────────────────
+  // The AI service builds an OSM road graph on demand (Overpass) and only
+  // works — and only finishes in reasonable time — for SHORT urban routes.
+  // For anything longer it would spend the full timeout building a graph it
+  // can't, so we go straight to OSRM (fast, sub-second, handles long routes).
+  // When we do try the AI service we cap it at a short timeout so a cold/slow
+  // HF Space never makes the user wait.
   async getOptimizedRoute(origin, destination, options = {}) {
+    const straightKm = this._haversineKm(origin, destination);
+    if (straightKm > AI_MAX_KM) {
+      return this.getOSRMRoute(origin, destination, options);
+    }
     try {
       const response = await axios.post(
         `${this.aiServiceUrl}/api/route/optimize`,
@@ -29,7 +56,7 @@ class RoutingService {
           avoid_congestion: options.avoidCongestion !== false,
           max_detour_percent: options.maxDetourPercent || 15,
         },
-        { timeout: 30000 }
+        { timeout: AI_TIMEOUT_MS }
       );
       return { ...response.data, source: 'ai_service' };
     } catch (err) {

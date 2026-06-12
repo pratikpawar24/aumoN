@@ -62,8 +62,14 @@ app.use(helmet({
 app.use(corsMiddleware);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(morgan(config.isProduction ? 'combined' : 'dev'));
-app.use(apiLimiter);
+// Don't log the platform's frequent /health pings — they bury real traffic.
+app.use(morgan(config.isProduction ? 'combined' : 'dev', {
+  skip: (req) => req.path === '/health',
+}));
+// Rate-limit API traffic only. /health (pinged every few seconds by Render)
+// and static/root must never be throttled — otherwise the platform's health
+// checks start failing with 429 and the service is marked unhealthy.
+app.use('/api', apiLimiter);
 
 // Serve avatars uploaded to disk (no-op when Cloudinary is configured).
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));

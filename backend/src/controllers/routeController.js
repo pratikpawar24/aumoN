@@ -9,9 +9,12 @@ const tollService = require('../services/tollService');
 // a road route — physical reality (open ocean, missing road networks)
 // makes it impossible. The frontend gets a clear error instead of a
 // silently-drawn straight line.
+// Upper bounds on straight-line distance before we refuse to even attempt a
+// road route. Generous for motorised vehicles so long cross-country trips
+// (e.g. Mumbai→Delhi/Kolkata) are allowed; OSRM handles these fine.
 const MAX_DISTANCE_KM = {
-  car: 2500, electric: 2500, motorcycle: 2000, bus: 1500,
-  bike: 200, walk: 50,
+  car: 6000, electric: 6000, motorcycle: 5000, bus: 4000,
+  bike: 500, walk: 100,
 };
 
 const haversineKm = (a, b) => {

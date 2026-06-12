@@ -20,7 +20,11 @@ const buildRouteOptions = (primaryRoute, extras = []) => {
   const out = [];
   for (const r of [primaryRoute, ...extras]) {
     if (!r || !(r.route_geometry?.length || r.routeGeometry?.length)) continue;
-    const key = `${r.profile || r.label}-${r.total_distance_km}-${r.total_time_minutes}`;
+    // De-dupe by GEOMETRY (rounded distance + time), NOT by profile. The free
+    // OSRM router has a single car profile, so "eco" and "fastest" frequently
+    // resolve to the exact same road — keying on profile would show two cards
+    // for one visible line. This way only genuinely-different paths appear.
+    const key = `${Math.round((r.total_distance_km || 0) * 10)}-${Math.round(r.total_time_minutes || 0)}`;
     if (seen.has(key)) continue;
     seen.add(key);
     out.push(r);
