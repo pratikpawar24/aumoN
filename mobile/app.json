@@ -37,6 +37,12 @@
         {
           "locationWhenInUsePermission": "AumoN uses your location to plan routes and track trips."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "AumoN needs access to your photos so you can set a profile picture."
+        }
       ]
     ],
     "extra": {

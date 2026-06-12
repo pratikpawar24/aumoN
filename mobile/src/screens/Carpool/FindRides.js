@@ -1,12 +1,13 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, Text, FlatList, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
 import locationService from '../../services/locationService';
 import { apiError } from '../../utils/helpers';
 import Loading from '../../components/common/Loading';
 
-const FindRides = () => {
+const FindRides = ({ onOpenChat }) => {
   const [rides, setRides] = useState([]);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
@@ -59,6 +60,10 @@ const FindRides = () => {
             <Text style={styles.route} numberOfLines={1}>🟢 {item.pickup?.address || 'Pickup'}</Text>
             <Text style={styles.route} numberOfLines={1}>🔴 {item.dropoff?.address || 'Drop-off'}</Text>
             <Text style={styles.when}>🕑 {new Date(item.departureTime).toLocaleString()} · {item.seatsAvailable} seat{item.seatsAvailable === 1 ? '' : 's'} left</Text>
+            <TouchableOpacity style={styles.msgBtn} onPress={() => onOpenChat?.(item)}>
+              <Ionicons name="chatbubble-ellipses-outline" size={16} color={colors.primary} />
+              <Text style={styles.msgText}>Message &amp; negotiate</Text>
+            </TouchableOpacity>
           </View>
         );
       }}
@@ -76,6 +81,11 @@ const styles = StyleSheet.create({
   price: { color: colors.primary, fontWeight: '800', fontSize: font.h3 },
   route: { color: colors.textMuted, fontSize: font.small },
   when: { color: colors.textSubtle, fontSize: font.tiny, marginTop: 4 },
+  msgBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: spacing.sm,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingVertical: 10,
+  },
+  msgText: { color: colors.primary, fontWeight: '700', fontSize: font.small },
   empty: { alignItems: 'center', paddingTop: 60 },
   emptyText: { color: colors.text, fontWeight: '600' },
   emptySub: { color: colors.textSubtle, fontSize: font.small, marginTop: 6 },

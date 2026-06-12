@@ -61,6 +61,12 @@ export const AuthProvider = ({ children }) => {
     return data;
   }, []);
 
+  const uploadAvatar = useCallback(async (file) => {
+    const data = await authService.uploadAvatar(file);
+    if (data?.user) setUser(data.user);
+    return data;
+  }, []);
+
   const logout = useCallback(async () => {
     await authService.logout();
     setUser(null);
@@ -78,6 +84,7 @@ export const AuthProvider = ({ children }) => {
         verifyEmail,
         refreshUser,
         updateUser,
+        uploadAvatar,
         logout,
         setUser,
       }}

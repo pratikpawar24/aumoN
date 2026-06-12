@@ -1,22 +1,28 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Modal } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import FindRides from './FindRides';
 import ScheduleRide from './ScheduleRide';
 import RideHistory from './RideHistory';
+import ChatInbox from './ChatInbox';
+import ChatScreen from './ChatScreen';
 
 const TABS = [
   { k: 'find', label: 'Find' },
   { k: 'schedule', label: 'Schedule' },
+  { k: 'inbox', label: 'Inbox' },
   { k: 'history', label: 'History' },
 ];
 
 const CarpoolScreen = () => {
   const [tab, setTab] = useState('find');
-  // Bump to force the history tab to reload after scheduling.
-  const [reload, setReload] = useState(0);
+  const [reload, setReload] = useState(0);          // history reload
+  const [inboxReload, setInboxReload] = useState(0); // inbox reload
+  const [chat, setChat] = useState(null);            // { ride, peerId?, peerName? }
+
   const goHistory = useCallback(() => { setReload((n) => n + 1); setTab('history'); }, []);
+  const closeChat = useCallback(() => setChat(null), []);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -27,21 +33,35 @@ const CarpoolScreen = () => {
 
       <View style={styles.tabs}>
         {TABS.map((t) => (
-          <Text
-            key={t.k}
-            onPress={() => setTab(t.k)}
-            style={[styles.tab, tab === t.k && styles.tabOn]}
-          >
+          <Text key={t.k} onPress={() => setTab(t.k)} style={[styles.tab, tab === t.k && styles.tabOn]}>
             {t.label}
           </Text>
         ))}
       </View>
 
       <View style={styles.body}>
-        {tab === 'find' && <FindRides />}
+        {tab === 'find' && <FindRides onOpenChat={(ride) => setChat({ ride })} />}
         {tab === 'schedule' && <ScheduleRide onScheduled={goHistory} />}
+        {tab === 'inbox' && (
+          <ChatInbox
+            reloadKey={inboxReload}
+            onOpenThread={(t) => setChat({ ride: t.ride, peerId: t.peerId, peerName: t.peer?.name })}
+          />
+        )}
         {tab === 'history' && <RideHistory reloadKey={reload} />}
       </View>
+
+      <Modal visible={!!chat} animationType="slide" onRequestClose={closeChat}>
+        {chat && (
+          <ChatScreen
+            ride={chat.ride}
+            peerId={chat.peerId}
+            peerName={chat.peerName}
+            onClose={closeChat}
+            onConfirmed={() => setInboxReload((n) => n + 1)}
+          />
+        )}
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -51,10 +71,10 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   title: { color: colors.text, fontSize: font.h2, fontWeight: '800' },
   sub: { color: colors.textSubtle, marginTop: 2 },
-  tabs: { flexDirection: 'row', gap: 8, padding: spacing.lg },
+  tabs: { flexDirection: 'row', gap: 6, padding: spacing.lg },
   tab: {
     flex: 1, textAlign: 'center', paddingVertical: 10, borderRadius: radius.md,
-    backgroundColor: colors.surface, color: colors.textSubtle, fontWeight: '700', overflow: 'hidden',
+    backgroundColor: colors.surface, color: colors.textSubtle, fontWeight: '700', overflow: 'hidden', fontSize: font.small,
   },
   tabOn: { backgroundColor: colors.primary, color: '#04210f' },
   body: { flex: 1 },

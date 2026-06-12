@@ -16,10 +16,13 @@ backend at `https://aumo-backend-h82m.onrender.com`.
   dotted), drawn on OpenStreetMap tiles.
 - **Live trip tracking** — GPS watch posts waypoints; shows distance remaining,
   ETA and a progress bar; auto-reroute prompt on wrong turns.
-- **Carpool** — find nearby rides, schedule a ride (driver/passenger), history.
+- **Carpool** — find nearby rides, schedule a ride (driver/passenger), history,
+  and a **chat inbox** to negotiate fares 1:1 with a driver in real time
+  (Socket.IO); drivers can **confirm a passenger** straight from the chat.
 - **Dashboard** — CO₂ saved / trips / distance / time over week·month·year +
   green leaderboard.
-- **Profile** — stats, default vehicle, sign out.
+- **Profile** — stats, default vehicle, **profile photo upload** (camera roll →
+  `/api/auth/avatar`), sign out.
 
 ## Prerequisites
 - Node 18+

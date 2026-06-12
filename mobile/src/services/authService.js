@@ -50,6 +50,19 @@ export const authService = {
     return res.data;
   },
 
+  // file: { uri, name, type } (React Native FormData file shape).
+  uploadAvatar: async (file) => {
+    const form = new FormData();
+    form.append('avatar', file);
+    const res = await api.post('/api/auth/avatar', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    if (res.data?.user) {
+      await AsyncStorage.setItem(STORAGE.USER, JSON.stringify(res.data.user));
+    }
+    return res.data;
+  },
+
   getStoredUser: async () => {
     const s = await AsyncStorage.getItem(STORAGE.USER);
     return s ? JSON.parse(s) : null;

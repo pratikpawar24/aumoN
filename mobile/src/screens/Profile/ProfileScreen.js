@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, font, radius, spacing } from '../../theme/theme';
+import { CONFIG } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../utils/helpers';
 import Card from '../../components/common/Card';
 import Button from '../../components/common/Button';
+
+// Avatar may be an absolute (Cloudinary) URL or a backend-relative /uploads path.
+const avatarUri = (avatar) =>
+  !avatar ? null : avatar.startsWith('http') ? avatar : `${CONFIG.API_URL}${avatar}`;
 
 const VEHICLES = [
   { k: 'car', l: '🚗 Car' },
@@ -14,11 +21,33 @@ const VEHICLES = [
 ];
 
 const ProfileScreen = () => {
-  const { user, updateUser, logout } = useAuth();
+  const { user, updateUser, uploadAvatar, logout } = useAuth();
   const [vehicle, setVehicle] = useState(user?.vehicleType || 'car');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const dirty = vehicle !== (user?.vehicleType || 'car');
+
+  const pickAvatar = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return Alert.alert('Permission needed', 'Allow photo access to set a picture.');
+    const res = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true, aspect: [1, 1], quality: 0.7,
+    });
+    if (res.canceled || !res.assets?.length) return;
+    const asset = res.assets[0];
+    const type = asset.mimeType || 'image/jpeg';
+    const ext = type.split('/')[1] || 'jpg';
+    setUploading(true);
+    try {
+      await uploadAvatar({ uri: asset.uri, name: `avatar.${ext}`, type });
+    } catch (e) {
+      Alert.alert('Upload failed', apiError(e));
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
@@ -48,7 +77,16 @@ const ProfileScreen = () => {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}>
         <View style={styles.header}>
-          <View style={styles.avatar}><Text style={styles.avatarText}>{(user?.name || 'U')[0].toUpperCase()}</Text></View>
+          <TouchableOpacity style={styles.avatar} onPress={pickAvatar} disabled={uploading} activeOpacity={0.8}>
+            {avatarUri(user?.avatar) ? (
+              <Image source={{ uri: avatarUri(user?.avatar) }} style={styles.avatarImg} />
+            ) : (
+              <Text style={styles.avatarText}>{(user?.name || 'U')[0].toUpperCase()}</Text>
+            )}
+            <View style={styles.camBadge}>
+              {uploading ? <ActivityIndicator size="small" color="#04210f" /> : <Ionicons name="camera" size={14} color="#04210f" />}
+            </View>
+          </TouchableOpacity>
           <Text style={styles.name}>{user?.name}</Text>
           <Text style={styles.email}>{user?.email}</Text>
           {user?.emailVerified ? <Text style={styles.verified}>✓ Verified</Text> : null}
@@ -85,8 +123,10 @@ const ProfileScreen = () => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   header: { alignItems: 'center', paddingTop: spacing.md },
-  avatar: { width: 72, height: 72, borderRadius: 36, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
-  avatarText: { color: colors.primary, fontSize: 30, fontWeight: '800' },
+  avatar: { width: 80, height: 80, borderRadius: 40, backgroundColor: colors.primarySoft, alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md },
+  avatarImg: { width: 80, height: 80, borderRadius: 40 },
+  avatarText: { color: colors.primary, fontSize: 32, fontWeight: '800' },
+  camBadge: { position: 'absolute', right: -2, bottom: -2, width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: colors.bg },
   name: { color: colors.text, fontSize: font.h2, fontWeight: '800' },
   email: { color: colors.textSubtle, marginTop: 2 },
   verified: { color: colors.primary, marginTop: 4, fontWeight: '700', fontSize: font.small },
