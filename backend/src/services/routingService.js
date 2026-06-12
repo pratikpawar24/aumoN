@@ -41,6 +41,17 @@ class RoutingService {
   // HF Space never makes the user wait.
   async getOptimizedRoute(origin, destination, options = {}) {
     const straightKm = this._haversineKm(origin, destination);
+
+    // Preferred when configured: OpenRouteService gives genuinely DIFFERENT
+    // routes per mode — Eco (carbon) avoids highways/tolls for a lower-emission
+    // path, Fastest (time) takes the quickest road — unlike the free OSRM
+    // single-profile router where eco≈fastest. Handles all distances; falls
+    // through to AI/OSRM if ORS is unset or returns nothing.
+    if (config.orsApiKey) {
+      const ors = await this._convertORSToRoute(origin, destination, options);
+      if (ors?.primary_route?.route_geometry?.length >= 2) return ors;
+    }
+
     if (straightKm > AI_MAX_KM) {
       return this.getOSRMRoute(origin, destination, options);
     }
@@ -215,11 +226,20 @@ class RoutingService {
     }
   }
 
-  // ── ORS-style route, converted to our internal shape ──────────────────────
+  // ── ORS route, converted to our internal shape ────────────────────────────
   async _convertORSToRoute(origin, destination, options = {}) {
     try {
-      const data = await this.getORSRoute(origin, destination, options.vehicleType);
+      const optimizeFor = options.optimizeFor || 'carbon';
+      let data = await this.getORSRoute(origin, destination, options);
+
+      // Eco avoids highways; on routes where that leaves no path (e.g. a long
+      // expressway-only corridor) ORS returns nothing — retry without the
+      // avoid so the user still gets a route.
+      if (!data?.features?.[0] && optimizeFor === 'carbon') {
+        data = await this.getORSRoute(origin, destination, { ...options, _noAvoid: true });
+      }
       if (!data?.features?.[0]) return null;
+
       const feat = data.features[0];
       const coords = feat.geometry.coordinates.map((c) => [c[1], c[0]]);
       const summary = feat.properties.summary || {};
@@ -235,6 +255,15 @@ class RoutingService {
         : (vehicleType === 'bike' || vehicleType === 'walk' ? 100 : 0);
       const greenScore = Math.max(0, Math.min(100, savingsPct));
 
+      // Turn-by-turn from ORS segments → our instruction shape.
+      const steps = (feat.properties.segments || []).flatMap((seg) => seg.steps || []);
+      const instructions = steps.map((s, i) => ({
+        step: i + 1,
+        instruction: s.instruction || '',
+        distance_m: Math.round(s.distance ?? 0),
+        duration_s: Math.round(s.duration ?? 0),
+      }));
+
       return {
         primary_route: {
           route_geometry: coords,
@@ -245,16 +274,16 @@ class RoutingService {
           baseline_emission_g: Math.round(baseline),
           co2_savings_percent: Math.round(savingsPct * 10) / 10,
           green_score: Math.round(greenScore * 10) / 10,
-          instructions: [],
-          label: 'ORS Route',
-          color: '#3b82f6',
-          profile: options.optimizeFor || 'balanced',
+          instructions,
+          label: this._labelForProfile(optimizeFor),
+          color: this._colorForProfile(optimizeFor),
+          profile: optimizeFor,
           vehicle_type: vehicleType,
-          algorithm: 'ors_fallback',
+          algorithm: 'ors',
         },
         alternatives: [],
         modal_comparison: this._modalComparison(distanceKm, timeMinutes),
-        source: 'ors_fallback',
+        source: 'ors',
       };
     } catch (e) {
       console.error('ORS conversion error:', e.message);
@@ -263,28 +292,51 @@ class RoutingService {
   }
 
   // ── OpenRouteService (2000 req/day free) ──────────────────────────────────
-  async getORSRoute(origin, destination, vehicleType = 'car') {
+  // Mode-aware: Eco (carbon) → preference "recommended" + avoid highways/tolls;
+  // Fastest (time) → "fastest"; shortest/balanced map accordingly. This is what
+  // makes Eco and Fastest produce visibly different polylines.
+  async getORSRoute(origin, destination, options = {}) {
     if (!config.orsApiKey) return null;
+    const vehicleType = (typeof options === 'string') ? options : (options.vehicleType || 'car');
+    const opts = (typeof options === 'string') ? {} : options;
+    const optimizeFor = opts.optimizeFor || 'carbon';
     try {
       const profile = this._orsProfile(vehicleType);
+
+      const body = {
+        coordinates: [
+          [origin.lng, origin.lat],
+          [destination.lng, destination.lat],
+        ],
+        instructions: true,
+        elevation: false,
+      };
+
+      if (optimizeFor === 'time') body.preference = 'fastest';
+      else if (optimizeFor === 'distance') body.preference = 'shortest';
+      else body.preference = 'recommended'; // carbon / balanced
+
+      // avoid_features: Eco avoids highways (lower speed → lower emissions);
+      // explicit avoid-tolls adds tollways. Skipped on the _noAvoid retry.
+      if (!opts._noAvoid) {
+        const avoid = [];
+        if (optimizeFor === 'carbon') avoid.push('highways');
+        if (opts.avoidTolls) avoid.push('tollways');
+        if (avoid.length) body.options = { avoid_features: avoid };
+      }
+
       const res = await axios.post(
         `${ORS_BASE}/directions/${profile}/geojson`,
+        body,
         {
-          coordinates: [
-            [origin.lng, origin.lat],
-            [destination.lng, destination.lat],
-          ],
-          instructions: true,
-          elevation: false,
-        },
-        {
-          headers: { Authorization: config.orsApiKey },
+          headers: { Authorization: config.orsApiKey, 'Content-Type': 'application/json' },
           timeout: 15000,
         }
       );
       return res.data;
     } catch (err) {
-      console.error('ORS error:', err.message);
+      const detail = err.response?.data?.error?.message || err.message;
+      console.error('ORS error:', detail);
       return null;
     }
   }
