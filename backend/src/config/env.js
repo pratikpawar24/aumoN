@@ -16,6 +16,8 @@ const optional = [
   'SMTP_PASS',
   'EMAIL_FROM',
   'BREVO_API_KEY',
+  'BREVO_SENDER_EMAIL',
+  'BREVO_SENDER_NAME',
   'CLOUDINARY_URL',
   // Phase 2
   'TOMTOM_API_KEY',
@@ -65,6 +67,14 @@ const config = {
   },
 
   brevoApiKey: process.env.BREVO_API_KEY || '',
+  // Verified Brevo sender. BREVO_SENDER_EMAIL must match a sender verified in
+  // the Brevo dashboard (e.g. admin.aumo@gmail.com) or Brevo rejects the send.
+  brevoSenderEmail: process.env.BREVO_SENDER_EMAIL || '',
+  brevoSenderName: process.env.BREVO_SENDER_NAME || 'AumoN Team',
+
+  // OTP tuning (used by the email verification flow).
+  otpExpiryMinutes: parseInt(process.env.OTP_EXPIRY_MINUTES) || 10,
+  otpLength: parseInt(process.env.OTP_LENGTH) || 6,
   cloudinaryUrl: process.env.CLOUDINARY_URL || '',
 
   tomtomApiKey: process.env.TOMTOM_API_KEY || '',

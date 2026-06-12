@@ -125,8 +125,8 @@ const MapPage = () => {
       <div className="flex-1 relative">
         <MapView onMapClick={handleMapClick} className="w-full h-full" />
 
-        {/* Layer controls */}
-        <div className="absolute top-4 right-4 z-10 space-y-2">
+        {/* Layer controls — z above Leaflet's own panes (which go up to ~700) */}
+        <div className="absolute top-4 right-4 z-[1000] space-y-2">
           <div className="relative">
             <button
               onClick={() => setLayerOpen((p) => !p)}
@@ -140,8 +140,14 @@ const MapPage = () => {
             </button>
 
             {layerOpen && (
-              <div className="absolute top-12 right-0 rounded-xl border aumo-border aumo-bg-popover
-                              shadow-xl w-40 py-1">
+              <div
+                className="absolute top-12 right-0 rounded-xl border aumo-border
+                           shadow-2xl w-44 py-1 max-h-[70vh] overflow-y-auto z-[1001]"
+                // Explicit opaque background so map tiles never bleed through the
+                // menu (the translucent token + Leaflet repaints were showing the
+                // map behind the panel).
+                style={{ background: '#1e293b', backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+              >
                 {mapStyles.map((s) => (
                   <button
                     key={s.id}

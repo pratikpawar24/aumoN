@@ -117,7 +117,7 @@ const userSchema = new mongoose.Schema(
     // admin UI can show who/when/how rather than just a boolean.
     verificationMethod: {
       type: String,
-      enum: ['otp', 'admin_manual', null],
+      enum: ['otp', 'email_otp', 'admin_manual', null],
       default: null,
     },
     verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },

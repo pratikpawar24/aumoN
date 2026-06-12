@@ -2,8 +2,9 @@ const User = require('../models/User');
 const { generateToken } = require('../middleware/auth');
 const emailService = require('../services/emailService');
 const uploadService = require('../services/uploadService');
+const { config } = require('../config/env');
 
-const OTP_TTL_MS = 10 * 60 * 1000;            // 10 minutes
+const OTP_TTL_MS = (config.otpExpiryMinutes || 10) * 60 * 1000;  // default 10 minutes
 const RESEND_COOLDOWN_MS = 60 * 1000;         // 1 minute between sends
 
 const issueOtpForUser = async (user) => {
@@ -231,9 +232,15 @@ exports.verifyEmail = async (req, res, next) => {
     }
 
     user.emailVerified = true;
+    user.verificationMethod = 'email_otp';
+    user.verifiedAt = new Date();
     user.verificationOtp = undefined;
     user.verificationOtpExpires = undefined;
     await user.save({ validateBeforeSave: false });
+
+    // Best-effort welcome email — never blocks the verify response.
+    emailService.sendWelcomeEmail({ to: user.email, name: user.name })
+      .catch((e) => console.warn('Welcome email skipped:', e.message));
 
     res.json({ success: true, message: 'Email verified.', user: user.toSafeObject() });
   } catch (err) {

@@ -24,6 +24,14 @@ const authLimiter = createLimiter(
   'Too many auth attempts. Please wait 15 minutes.'
 );
 
+// OTP send/resend — tight, to prevent email-bombing. Pairs with the per-user
+// 60s cooldown enforced in the controller.
+const otpLimiter = createLimiter(
+  10 * 60 * 1000,   // 10 minutes
+  5,                // 5 OTP sends per 10 minutes per IP
+  'Too many verification-code requests. Please try again in a few minutes.'
+);
+
 // Route calculation - moderate
 const routeLimiter = createLimiter(
   1 * 60 * 1000,    // 1 minute
@@ -38,4 +46,4 @@ const mapLimiter = createLimiter(
   'Too many map requests. Please slow down.'
 );
 
-module.exports = { apiLimiter, authLimiter, routeLimiter, mapLimiter };
+module.exports = { apiLimiter, authLimiter, otpLimiter, routeLimiter, mapLimiter };

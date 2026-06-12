@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
 const { protect } = require('../middleware/auth');
-const { authLimiter } = require('../middleware/rateLimiter');
+const { authLimiter, otpLimiter } = require('../middleware/rateLimiter');
 const {
   registerValidation,
   loginValidation,
@@ -18,7 +18,7 @@ router.delete('/account', protect, authController.deleteAccount);
 router.get('/verify', protect, authController.verifyToken);
 
 // Email verification
-router.post('/send-verification', protect, authLimiter, authController.sendVerification);
+router.post('/send-verification', protect, otpLimiter, authController.sendVerification);
 router.post('/verify-email', protect, authLimiter, verifyEmailValidation, authController.verifyEmail);
 
 // Avatar upload (multipart/form-data, field name "avatar")
