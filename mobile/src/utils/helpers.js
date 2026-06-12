@@ -29,8 +29,8 @@ export const formatEmission = (grams) => {
   return grams < 1000 ? `${Math.round(grams)} g` : `${(grams / 1000).toFixed(1)} kg`;
 };
 
-// react-native-maps wants {latitude, longitude}; the backend returns
-// route_geometry as [lat, lng] pairs (or {lat,lng}).
+// Normalise backend route_geometry ([lat,lng] pairs or {lat,lng}) into
+// {latitude, longitude} objects, for any consumer that wants that shape.
 export const toLatLngList = (geometry = []) =>
   geometry
     .map((p) => {

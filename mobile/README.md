@@ -13,7 +13,8 @@ backend at `https://aumo-backend-h82m.onrender.com`.
   JWT flow (the token identifies the user; OTP is sent + verified server-side).
 - **Map & routing** — origin/destination search (backend geocoding proxy),
   **Eco vs Fastest** with up to 3 selectable routes (selected solid, others
-  dotted), drawn on OpenStreetMap tiles.
+  dotted), drawn on **free OpenStreetMap** tiles (Leaflet in a WebView — **no
+  Google Maps key, no API key of any kind required**).
 - **Live trip tracking** — GPS watch posts waypoints; shows distance remaining,
   ETA and a progress bar; auto-reroute prompt on wrong turns.
 - **Carpool** — find nearby rides, schedule a ride (driver/passenger), history,
@@ -41,18 +42,11 @@ The backend URL is preset in `app.json → expo.extra.apiUrl`. For local backend
 testing, change it to `http://10.0.2.2:5000` (Android emulator) or your machine's
 LAN IP `http://192.168.x.x:5000` (physical device).
 
-## Google Maps key (required for the map screen on Android)
-The map uses `react-native-maps`, which on Android needs a free Google Maps key
-to initialise (even though we render **OpenStreetMap** tiles on top):
-
-1. https://console.cloud.google.com → new project → enable **Maps SDK for Android**.
-2. Create an **API key** (restrict it to Android apps for safety).
-3. Put it in `app.json` → `expo.android.config.googleMaps.apiKey`
-   (replace `REPLACE_WITH_YOUR_GOOGLE_MAPS_ANDROID_API_KEY`).
-
-Everything except the map screen works without the key. To use native maps you
-need a **development build** (`npx expo run:android`) or EAS build — `react-native-maps`
-is not fully supported in the prebuilt Expo Go on all SDKs.
+## Maps — 100% free, no API key
+The map screen renders **OpenStreetMap** tiles with **Leaflet inside a WebView**
+(`react-native-webview`) — the same free stack as the AumoN web app. There is
+**no Google Maps key and no map API key to configure**, and it runs fine in
+**Expo Go** (no native/dev build needed just for the map).
 
 ## Build an APK
 ```bash
@@ -78,7 +72,7 @@ mobile/
 ```
 
 ## Notes / limitations
-- Maps need the Google key (above) on Android; the rest is key-free.
+- Maps are fully free/key-free (OpenStreetMap + Leaflet in a WebView).
 - Departure time uses preset chips (Now / +30m / +1h / +2h / Tomorrow 9 AM) to
   avoid a native date-picker dependency.
 - Built and statically verified (syntax + import resolution) but not yet run on a
