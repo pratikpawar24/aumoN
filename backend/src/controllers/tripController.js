@@ -15,17 +15,33 @@ const haversineMeters = (a, b) => {
   return 2 * EARTH_M * Math.atan2(Math.sqrt(s), Math.sqrt(1 - s));
 };
 
-// Min distance from a point to any vertex on a polyline. Cheap approximation
-// of distance-to-segment; good enough for deviation detection at our scale.
-const minDistToPolyline = (point, polyline) => {
-  if (!polyline?.length) return Infinity;
+// Min distance from a point to any vertex on a polyline + the index of that
+// nearest vertex. Cheap approximation of distance-to-segment; good enough for
+// deviation detection and progress at our scale.
+const nearestOnPolyline = (point, polyline) => {
+  if (!polyline?.length) return { distM: Infinity, index: -1 };
   let best = Infinity;
-  for (const v of polyline) {
+  let bestIdx = -1;
+  for (let i = 0; i < polyline.length; i++) {
+    const v = polyline[i];
     if (!v || v.length < 2) continue;
     const d = haversineMeters(point, v);
-    if (d < best) best = d;
+    if (d < best) { best = d; bestIdx = i; }
   }
-  return best;
+  return { distM: best, index: bestIdx };
+};
+
+// Total length (km) of a [lat,lng] polyline, optionally only from `fromIdx`.
+const polylineLengthKm = (polyline, fromIdx = 0) => {
+  if (!polyline?.length) return 0;
+  let m = 0;
+  for (let i = Math.max(1, fromIdx + 1); i < polyline.length; i++) {
+    const a = polyline[i - 1];
+    const b = polyline[i];
+    if (!a || !b || a.length < 2 || b.length < 2) continue;
+    m += haversineMeters([a[0], a[1]], [b[0], b[1]]);
+  }
+  return m / 1000;
 };
 
 exports.startTrip = async (req, res, next) => {
@@ -79,13 +95,23 @@ exports.appendWaypoint = async (req, res, next) => {
     }
     trip.waypoints.push({ lat, lng, speedMps, accuracyM, t: new Date() });
 
-    // Deviation check: distance from new waypoint to planned polyline
-    const distM = minDistToPolyline([lat, lng], trip.plannedGeometry);
+    // Deviation check + progress: how far the current point is from the
+    // planned polyline, and where along it we are.
+    const { distM, index } = nearestOnPolyline([lat, lng], trip.plannedGeometry);
     let deviated = false;
     if (Number.isFinite(distM) && distM > DEVIATION_M) {
       trip.deviationCount += 1;
       deviated = true;
     }
+
+    // Remaining distance = length of the planned route from the nearest
+    // vertex to the destination. Shrinks as the driver advances. Progress is
+    // the share of the planned route already covered.
+    const plannedTotalKm = polylineLengthKm(trip.plannedGeometry, 0);
+    const remainingKm = index >= 0 ? polylineLengthKm(trip.plannedGeometry, index) : plannedTotalKm;
+    const progressPercent = plannedTotalKm > 0
+      ? Math.max(0, Math.min(100, ((plannedTotalKm - remainingKm) / plannedTotalKm) * 100))
+      : 0;
 
     await trip.save();
 
@@ -96,6 +122,8 @@ exports.appendWaypoint = async (req, res, next) => {
         tripId: trip._id,
         lat, lng, t: new Date(),
         deviated, deviationDistanceM: Math.round(distM),
+        remainingKm: Math.round(remainingKm * 100) / 100,
+        progressPercent: Math.round(progressPercent),
       });
     }
 
@@ -104,6 +132,8 @@ exports.appendWaypoint = async (req, res, next) => {
       tripId: trip._id,
       waypointCount: trip.waypoints.length,
       distanceTraveledKm: Math.round(trip.distanceTraveledKm * 100) / 100,
+      remainingKm: Math.round(remainingKm * 100) / 100,
+      progressPercent: Math.round(progressPercent),
       deviated,
       deviationDistanceM: Math.round(distM),
       shouldReroute: deviated && trip.deviationCount >= 2,

@@ -357,6 +357,7 @@ const RoutePanel = () => {
               tracking={tracker.tracking}
               starting={tripStarting}
               position={tracker.position}
+              progress={tracker.progress}
               onStart={handleStartTrip}
               onStop={handleStopTrip}
             />

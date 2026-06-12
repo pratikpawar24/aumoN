@@ -32,12 +32,22 @@ const carpoolService = {
   },
 
   // ── Chat ─────────────────────────────────────────────────────────────────
-  listMessages: async (rideId) => {
-    const res = await api.get(`/api/chat/${rideId}/messages`);
+  listMessages: async (rideId, peerId) => {
+    const res = await api.get(`/api/chat/${rideId}/messages`, {
+      params: peerId ? { peerId } : {},
+    });
     return res.data;
   },
-  sendMessage: async (rideId, body) => {
-    const res = await api.post(`/api/chat/${rideId}/messages`, { body });
+  sendMessage: async (rideId, body, peerId) => {
+    const res = await api.post(`/api/chat/${rideId}/messages`, { body, peerId });
+    return res.data;
+  },
+  listThreads: async () => {
+    const res = await api.get('/api/chat/threads');
+    return res.data;
+  },
+  confirmRide: async (rideId, passengerId, agreedPrice) => {
+    const res = await api.post(`/api/chat/${rideId}/confirm`, { passengerId, agreedPrice });
     return res.data;
   },
 };

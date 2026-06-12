@@ -6,7 +6,8 @@ export const MapProvider = ({ children }) => {
   const mapRef = useRef(null);
   const [mapCenter, setMapCenter]       = useState([20.5937, 78.9629]);
   const [mapZoom, setMapZoom]           = useState(13);
-  const [mapStyle, setMapStyle]         = useState('dark');
+  // Default to the street (OSM) basemap when the map opens.
+  const [mapStyle, setMapStyle]         = useState('osm');
   const [origin, setOrigin]             = useState(null);
   const [destination, setDestination]   = useState(null);
   const [currentRoute, setCurrentRoute] = useState(null);

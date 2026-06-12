@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { X, Send, Lock } from 'lucide-react';
+import { X, Send, Lock, CheckCircle2 } from 'lucide-react';
 import carpoolService from '../../services/carpoolService';
 import { getSocket } from '../../services/socket';
 import { useAuth } from '../../hooks/useAuth';
@@ -7,23 +7,33 @@ import { Spinner } from '../Common/Loading';
 import { formatRelativeTime } from '../../utils/helpers';
 import toast from 'react-hot-toast';
 
-const ChatPanel = ({ ride, onClose }) => {
+const ChatPanel = ({ ride, peerId, peerName, onClose, onConfirmed }) => {
   const { user } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const scrollRef = useRef(null);
   const socketRef = useRef(null);
 
   const rideId = ride?._id;
+  const me = user?._id;
+  const driverId = ride?.userId?._id || ride?.userId;
+  const isDriver = String(driverId) === String(me);
+  // Which 1:1 thread this panel shows. A passenger always talks in their own
+  // thread; a driver opens a specific passenger's thread (peerId). When no
+  // peer is given and the caller is the driver, fall through to the group room.
+  const effectivePeerId = peerId != null ? peerId : (isDriver ? undefined : me);
+  const samePeer = (a, b) => String(a ?? '') === String(b ?? '');
 
   // Initial fetch + socket subscription
   useEffect(() => {
     if (!rideId) return;
     let cancelled = false;
 
-    carpoolService.listMessages(rideId)
+    carpoolService.listMessages(rideId, effectivePeerId)
       .then((data) => { if (!cancelled) setMessages(data.messages || []); })
       .catch((err) => {
         if (cancelled) return;
@@ -36,7 +46,8 @@ const ChatPanel = ({ ride, onClose }) => {
     socketRef.current = socket;
     socket.emit('join-chat-room', rideId);
     const handler = (msg) => {
-      // De-dupe by _id
+      // The room is per-ride, so ignore messages from other 1:1 threads.
+      if (!samePeer(msg.peerId, effectivePeerId)) return;
       setMessages((prev) =>
         prev.find((m) => m._id === msg._id) ? prev : [...prev, msg]
       );
@@ -48,7 +59,7 @@ const ChatPanel = ({ ride, onClose }) => {
       socket.off('chat-message', handler);
       socket.emit('leave-chat-room', rideId);
     };
-  }, [rideId, onClose]);
+  }, [rideId, effectivePeerId, onClose]);
 
   // Auto-scroll to latest
   useEffect(() => {
@@ -63,7 +74,7 @@ const ChatPanel = ({ ride, onClose }) => {
     if (!body || sending) return;
     setSending(true);
     try {
-      const res = await carpoolService.sendMessage(rideId, body);
+      const res = await carpoolService.sendMessage(rideId, body, effectivePeerId);
       // Server emits to room; we still optimistically push for self in case
       // of any socket gap.
       setMessages((prev) =>
@@ -77,7 +88,38 @@ const ChatPanel = ({ ride, onClose }) => {
     }
   };
 
+  const handleConfirm = async () => {
+    if (!effectivePeerId) return;
+    const priceStr = window.prompt('Agreed fare per seat (₹) — leave blank to keep the listed price:');
+    if (priceStr === null) return; // cancelled
+    const agreedPrice = priceStr.trim() === '' ? undefined : Number(priceStr);
+    setConfirming(true);
+    try {
+      const res = await carpoolService.confirmRide(rideId, effectivePeerId, agreedPrice);
+      setConfirmed(true);
+      if (res.message) {
+        setMessages((prev) =>
+          prev.find((m) => m._id === res.message._id) ? prev : [...prev, res.message]
+        );
+      }
+      toast.success('Ride confirmed 🎉');
+      onConfirmed?.(res);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not confirm ride');
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   if (!ride) return null;
+
+  // Who the header names: a driver sees the passenger; a passenger sees the driver.
+  const title = isDriver
+    ? (peerName || 'Passenger')
+    : (ride.userId?.name || 'Driver');
+  // Show the confirm control to the driver on a specific passenger thread when
+  // seats remain and not already confirmed.
+  const canConfirm = isDriver && effectivePeerId && !confirmed && (ride.seatsAvailable ?? 0) >= 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4
@@ -93,17 +135,33 @@ const ChatPanel = ({ ride, onClose }) => {
         <div className="flex items-center justify-between px-4 py-3 border-b aumo-border">
           <div className="min-w-0">
             <h3 className="font-semibold aumo-text-primary truncate">
-              {ride.userId?.name || 'Driver'}
+              {title}
             </h3>
             <p className="text-xs aumo-text-subtle truncate">
               {ride.pickup?.address?.split(',')[0]} → {ride.dropoff?.address?.split(',')[0]}
             </p>
           </div>
-          <button onClick={onClose}
-                  className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center
-                             rounded-lg aumo-text-muted hover:aumo-text-primary">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {canConfirm && (
+              <button onClick={handleConfirm} disabled={confirming}
+                      className="px-3 py-2 min-h-[40px] rounded-lg text-xs font-semibold
+                                 text-white bg-green-500 hover:bg-green-600 disabled:opacity-50
+                                 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4" />
+                {confirming ? 'Confirming…' : 'Confirm ride'}
+              </button>
+            )}
+            {confirmed && (
+              <span className="text-xs text-green-500 flex items-center gap-1">
+                <CheckCircle2 className="w-4 h-4" /> Confirmed
+              </span>
+            )}
+            <button onClick={onClose}
+                    className="p-2 min-w-[44px] min-h-[44px] flex items-center justify-center
+                               rounded-lg aumo-text-muted hover:aumo-text-primary">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Privacy notice */}
@@ -123,6 +181,16 @@ const ChatPanel = ({ ride, onClose }) => {
             </p>
           ) : (
             messages.map((m) => {
+              if (m.kind === 'system') {
+                return (
+                  <div key={m._id} className="flex justify-center">
+                    <span className="text-xs text-green-500 bg-green-500/10 border border-green-500/20
+                                     rounded-full px-3 py-1">
+                      {m.body}
+                    </span>
+                  </div>
+                );
+              }
               const mine = String(m.userId?._id || m.userId) === String(user?._id);
               return (
                 <div key={m._id}

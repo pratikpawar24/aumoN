@@ -17,6 +17,20 @@ const chatMessageSchema = new mongoose.Schema(
       ref: 'User',
       required: true,
     },
+    // The passenger party of a 1:1 negotiation thread (driver ↔ this
+    // passenger). null = the shared group room of an AI-matched ride (legacy).
+    // A thread is identified by (rideId, peerId).
+    peerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+      index: true,
+    },
+    kind: {
+      type: String,
+      enum: ['text', 'system'],
+      default: 'text',
+    },
     body: {
       type: String,
       required: true,
@@ -35,5 +49,6 @@ const chatMessageSchema = new mongoose.Schema(
 );
 
 chatMessageSchema.index({ rideId: 1, createdAt: 1 });
+chatMessageSchema.index({ rideId: 1, peerId: 1, createdAt: 1 });
 
 module.exports = mongoose.model('ChatMessage', chatMessageSchema);

@@ -8,12 +8,22 @@ import { Spinner } from '../Common/Loading';
  * signal that triggers the permission prompt the first time.
  */
 const StartTripButton = ({
-  isAvailable, tracking, starting, position,
+  isAvailable, tracking, starting, position, progress,
   onStart, onStop,
 }) => {
   if (!isAvailable) return null;
 
   if (tracking) {
+    // Live ETA from remaining distance + current speed (fall back to a 30 km/h
+    // city average when GPS speed is unavailable).
+    let etaMin = null;
+    if (progress?.remainingKm != null) {
+      const kmh = progress.speedMps && progress.speedMps > 0.5
+        ? progress.speedMps * 3.6
+        : 30;
+      etaMin = Math.round((progress.remainingKm / kmh) * 60);
+    }
+
     return (
       <div className="rounded-xl border border-green-500/30 p-3 space-y-2"
            style={{ background: 'rgba(34,197,94,0.10)' }}>
@@ -24,6 +34,28 @@ const StartTripButton = ({
           </span>
           Trip in progress
         </div>
+
+        {progress?.remainingKm != null && (
+          <div className="space-y-1.5">
+            <div className="flex items-baseline justify-between">
+              <span className="text-lg font-bold text-white">
+                {progress.remainingKm.toFixed(1)} km left
+              </span>
+              {etaMin != null && (
+                <span className="text-xs text-slate-300">≈ {etaMin} min</span>
+              )}
+            </div>
+            {/* Progress bar — fills as the remaining distance shrinks. */}
+            <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+              <div className="h-full bg-green-500 transition-all duration-500"
+                   style={{ width: `${progress.progressPercent || 0}%` }} />
+            </div>
+            <p className="text-[11px] text-slate-400">
+              {progress.distanceTraveledKm?.toFixed(1) ?? '0.0'} km travelled · {progress.progressPercent || 0}% there
+            </p>
+          </div>
+        )}
+
         {position && (
           <p className="text-xs text-slate-400">
             <Navigation className="w-3 h-3 inline mr-1" />

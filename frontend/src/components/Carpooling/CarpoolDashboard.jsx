@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { Users, Search, Calendar, Clock } from 'lucide-react';
+import { Users, Search, Calendar, Clock, MessageSquare } from 'lucide-react';
 import FindRides    from './FindRides';
 import ScheduleRide from './ScheduleRide';
 import RideHistory  from './RideHistory';
+import ChatInbox    from './ChatInbox';
 import ChatPanel    from './ChatPanel';
 
 const TABS = [
   { id: 'find',     label: 'Find Rides',    icon: Search },
   { id: 'schedule', label: 'Schedule Ride', icon: Calendar },
+  { id: 'inbox',    label: 'Inbox',         icon: MessageSquare },
   { id: 'history',  label: 'History',       icon: Clock },
 ];
 
 const CarpoolDashboard = () => {
   const [tab, setTab] = useState('find');
-  const [chatRide, setChatRide] = useState(null);
+  // The chat to show, if any: { ride, peerId?, peerName? }.
+  const [chat, setChat] = useState(null);
+  const [inboxRefresh, setInboxRefresh] = useState(0);
+
+  const closeChat = () => setChat(null);
 
   return (
     <div className="max-w-2xl mx-auto p-4 space-y-5">
@@ -48,11 +54,25 @@ const CarpoolDashboard = () => {
       </div>
 
       {/* Tab content */}
-      {tab === 'find'     && <FindRides    onOpenChat={setChatRide} />}
+      {tab === 'find'     && <FindRides    onOpenChat={(ride) => setChat({ ride })} />}
       {tab === 'schedule' && <ScheduleRide onSuccess={() => setTab('history')} />}
+      {tab === 'inbox'    && (
+        <ChatInbox
+          refreshKey={inboxRefresh}
+          onOpenThread={(t) => setChat({ ride: t.ride, peerId: t.peerId, peerName: t.peer?.name })}
+        />
+      )}
       {tab === 'history'  && <RideHistory />}
 
-      {chatRide && <ChatPanel ride={chatRide} onClose={() => setChatRide(null)} />}
+      {chat && (
+        <ChatPanel
+          ride={chat.ride}
+          peerId={chat.peerId}
+          peerName={chat.peerName}
+          onClose={closeChat}
+          onConfirmed={() => setInboxRefresh((n) => n + 1)}
+        />
+      )}
     </div>
   );
 };

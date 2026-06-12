@@ -21,6 +21,8 @@ export const useTripTracker = ({ onReroute } = {}) => {
   const [position, setPosition] = useState(null); // {lat, lng, accuracy, t}
   const [tracking, setTracking] = useState(false);
   const [error, setError] = useState(null);
+  // Live progress along the planned route, updated each GPS tick.
+  const [progress, setProgress] = useState(null); // {remainingKm, progressPercent, distanceTraveledKm}
 
   const watchIdRef = useRef(null);
 
@@ -86,6 +88,14 @@ export const useTripTracker = ({ onReroute } = {}) => {
             speedMps: speed ?? null,
             accuracyM: accuracy ?? null,
           });
+          if (res.remainingKm != null) {
+            setProgress({
+              remainingKm: res.remainingKm,
+              progressPercent: res.progressPercent ?? 0,
+              distanceTraveledKm: res.distanceTraveledKm ?? 0,
+              speedMps: speed ?? null,
+            });
+          }
           if (res.shouldReroute && onReroute) onReroute(res);
         } catch (err) {
           // Network blip — keep tracking; don't tear down.
@@ -116,6 +126,7 @@ export const useTripTracker = ({ onReroute } = {}) => {
     const res = await tripService.end(tripId);
     setTripId(null);
     setPosition(null);
+    setProgress(null);
     return res.trip;
   }, [tripId, stopWatch]);
 
@@ -141,6 +152,7 @@ export const useTripTracker = ({ onReroute } = {}) => {
     tracking,
     tripId,
     position,
+    progress,
     error,
     startTrip,
     endTrip,

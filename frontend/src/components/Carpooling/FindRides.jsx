@@ -206,7 +206,7 @@ const RideCard = ({ ride, onOpenChat }) => {
                      border aumo-border rounded-xl text-sm aumo-text-primary
                      hover:bg-black/5 dark:hover:bg-white/10 transition-colors"
         >
-          <MessageSquare className="w-3.5 h-3.5" /> Message
+          <MessageSquare className="w-3.5 h-3.5" /> Message &amp; negotiate
         </button>
       </div>
     </div>
