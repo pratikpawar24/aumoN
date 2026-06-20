@@ -4,8 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
-import { apiError } from '../../utils/helpers';
+import { apiError, estimateEtaMinutes, estimateFare } from '../../utils/helpers';
 import Button from '../../components/common/Button';
+import StatusStepper from '../../components/carpool/StatusStepper';
 
 const STATUS_COLOR = { matched: colors.primary, pending: colors.warning, matching: colors.warning, completed: colors.info, cancelled: colors.textSubtle };
 
@@ -64,8 +65,12 @@ const RideDetailsScreen = ({ ride, onClose, onCancelled, onMessages }) => {
           <View style={styles.legRow}><View style={[styles.dot, { backgroundColor: colors.danger }]} /><Text style={styles.leg} numberOfLines={2}>{ride.dropoff?.address || 'Drop-off'}</Text></View>
         </View>
 
+        <View style={styles.card}><StatusStepper status={ride.status} /></View>
+
         <View style={styles.card}>
           <Row icon="time-outline" label="Departs" value={new Date(ride.departureTime).toLocaleString()} />
+          <Row icon="speedometer-outline" label="Est. time" value={`~${estimateEtaMinutes(ride.pickup, ride.dropoff)} min`} />
+          {ride.price == null && <Row icon="cash-outline" label="Est. fare" value={`₹${estimateFare(ride.pickup, ride.dropoff)}`} />}
           <Row icon="person-outline" label="Role" value={ride.role === 'driver' ? 'Driver (offering)' : 'Passenger'} />
           <Row icon="people-outline" label={ride.role === 'driver' ? 'Seats left' : 'Seats needed'} value={String(ride.role === 'driver' ? ride.seatsAvailable : ride.seatsNeeded)} />
           {ride.price != null && <Row icon="cash-outline" label="Fare" value={`₹${ride.price}`} />}

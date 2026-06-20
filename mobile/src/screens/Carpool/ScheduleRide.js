@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
-import { apiError, haversineKm } from '../../utils/helpers';
+import { apiError, haversineKm, estimateEtaMinutes, estimateFare } from '../../utils/helpers';
 import LocationSearchInput from '../../components/common/LocationSearchInput';
 import Input from '../../components/common/Input';
 import Button from '../../components/common/Button';
@@ -105,6 +105,12 @@ const ScheduleRide = ({ onScheduled }) => {
         />
       </View>
 
+      {pickup && dropoff && (
+        <View style={styles.preview}>
+          <Text style={styles.previewText}>~{estimateEtaMinutes(pickup, dropoff)} min · ₹{estimateFare(pickup, dropoff)} est.</Text>
+        </View>
+      )}
+
       <Button title="🚗 Schedule ride" onPress={submit} loading={loading} disabled={!valid} style={{ marginTop: 6 }} />
     </ScrollView>
   );
@@ -119,6 +125,8 @@ const styles = StyleSheet.create({
   chipOn: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   chipText: { color: colors.textSubtle, fontWeight: '700' },
   chipTextOn: { color: colors.primary },
+  preview: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.primarySoft, alignItems: 'center' },
+  previewText: { color: colors.primary, fontWeight: '700' },
 });
 
 export default ScheduleRide;
