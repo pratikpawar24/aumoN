@@ -1,5 +1,6 @@
 const RideBooking = require('../models/RideBooking');
 const CarpoolRequest = require('../models/CarpoolRequest');
+const User = require('../models/User');
 const pushService = require('../services/pushService');
 
 const POP_RIDE = { path: 'rideId', select: 'pickup dropoff departureTime price seatsAvailable status role' };
@@ -94,6 +95,23 @@ exports.confirmBooking = async (req, res, next) => {
     if (['completed', 'cancelled'].includes(ride.status)) {
       return res.status(400).json({ success: false, message: `This ride is ${ride.status}.` });
     }
+
+    // Passenger was already seated via the chat confirmRide path — don't
+    // deduct seats a second time; just flip the booking status and notify.
+    const alreadySeated = (ride.matchedWith || []).some(
+      (id) => String(id) === String(booking.passengerId)
+    );
+    if (alreadySeated) {
+      booking.status = 'confirmed';
+      await booking.save();
+      pushService.sendToUser(booking.passengerId, {
+        title: 'Booking confirmed ✅',
+        body: `Your ${booking.seats}-seat booking was confirmed by the driver.`,
+        data: { type: 'booking', bookingId: String(booking._id), rideId: String(ride._id) },
+      });
+      return res.json({ success: true, booking });
+    }
+
     if ((ride.seatsAvailable || 0) < booking.seats) {
       return res.status(400).json({ success: false, message: `Only ${ride.seatsAvailable} seat(s) left.` });
     }
@@ -130,6 +148,11 @@ exports.confirmBooking = async (req, res, next) => {
     booking.status = 'confirmed';
     booking.passengerRequestId = passengerRequestId;
     await booking.save();
+
+    // Best-effort: track how many carpools this passenger has joined.
+    User.updateOne({ _id: booking.passengerId }, { $inc: { carpoolsJoined: 1 } }).catch(
+      (e) => console.warn('carpoolsJoined increment failed:', e.message)
+    );
 
     pushService.sendToUser(booking.passengerId, {
       title: 'Booking confirmed ✅',

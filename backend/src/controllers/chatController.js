@@ -211,6 +211,11 @@ exports.confirmRide = async (req, res, next) => {
     if (ride.seatsAvailable <= 0) ride.status = 'matched';
     await ride.save();
 
+    // Best-effort: track how many carpools this passenger has joined.
+    User.updateOne({ _id: passengerId }, { $inc: { carpoolsJoined: 1 } }).catch(
+      (e) => console.warn('carpoolsJoined increment failed:', e.message)
+    );
+
     // Mirror as a matched passenger request so it appears in the passenger's
     // carpool history. Best-effort — never blocks the confirm.
     let passengerRequest = null;

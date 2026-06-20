@@ -118,4 +118,13 @@ carpoolRequestSchema.index({ status: 1, departureTime: 1 });
 carpoolRequestSchema.index({ userId: 1, status: 1 });
 carpoolRequestSchema.index({ 'pickup.lat': 1, 'pickup.lng': 1 });
 
+// Keep the ride visible until shortly after it happens: expire 24h past
+// departure, not 24h past creation. Mirrors the chat-message TTL convention.
+carpoolRequestSchema.pre('save', function (next) {
+  if (this.departureTime) {
+    this.expiresAt = new Date(new Date(this.departureTime).getTime() + 24 * 60 * 60 * 1000);
+  }
+  next();
+});
+
 module.exports = mongoose.model('CarpoolRequest', carpoolRequestSchema);
