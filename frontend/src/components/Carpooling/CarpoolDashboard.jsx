@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Users, Search, Calendar, Clock, MessageSquare } from 'lucide-react';
+import { Users, Search, Calendar, Clock, MessageSquare, Ticket } from 'lucide-react';
 import FindRides    from './FindRides';
 import ScheduleRide from './ScheduleRide';
 import RideHistory  from './RideHistory';
+import Bookings     from './Bookings';
 import ChatInbox    from './ChatInbox';
 import ChatPanel    from './ChatPanel';
 
 const TABS = [
   { id: 'find',     label: 'Find Rides',    icon: Search },
   { id: 'schedule', label: 'Schedule Ride', icon: Calendar },
+  { id: 'bookings', label: 'Bookings',      icon: Ticket },
   { id: 'inbox',    label: 'Inbox',         icon: MessageSquare },
   { id: 'history',  label: 'History',       icon: Clock },
 ];
@@ -56,6 +58,7 @@ const CarpoolDashboard = () => {
       {/* Tab content */}
       {tab === 'find'     && <FindRides    onOpenChat={(ride) => setChat({ ride })} />}
       {tab === 'schedule' && <ScheduleRide onSuccess={() => setTab('history')} />}
+      {tab === 'bookings' && <Bookings />}
       {tab === 'inbox'    && (
         <ChatInbox
           refreshKey={inboxRefresh}
