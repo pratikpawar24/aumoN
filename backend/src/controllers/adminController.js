@@ -61,6 +61,59 @@ exports.getStats = async (req, res, next) => {
   }
 };
 
+// ── Reports: app-wide + per-user rollups ─────────────────────────────────────
+exports.getReports = async (req, res, next) => {
+  try {
+    const [userAgg, carpoolRides, topUsers] = await Promise.all([
+      User.aggregate([
+        { $match: { role: 'user' } },
+        {
+          $group: {
+            _id: null,
+            users: { $sum: 1 },
+            verified: { $sum: { $cond: ['$emailVerified', 1, 0] } },
+            blocked: { $sum: { $cond: ['$isBlocked', 1, 0] } },
+            totalTrips: { $sum: '$totalTrips' },
+            totalDistanceKm: { $sum: '$totalDistanceKm' },
+            totalCO2SavedG: { $sum: '$totalCO2Saved' },
+          },
+        },
+      ]),
+      CarpoolRequest.countDocuments({}),
+      User.find({ role: 'user' })
+        .select('name email totalTrips totalCO2Saved totalDistanceKm carpoolsJoined')
+        .sort({ totalCO2Saved: -1 })
+        .limit(50)
+        .lean(),
+    ]);
+
+    const a = userAgg[0] || {};
+    res.json({
+      success: true,
+      app: {
+        users: a.users || 0,
+        verified: a.verified || 0,
+        blocked: a.blocked || 0,
+        totalTrips: a.totalTrips || 0,
+        totalDistanceKm: Math.round(a.totalDistanceKm || 0),
+        totalCO2SavedKg: Math.round((a.totalCO2SavedG || 0) / 1000),
+        carpoolRides,
+      },
+      topUsers: topUsers.map((u) => ({
+        _id: u._id,
+        name: u.name,
+        email: u.email,
+        totalTrips: u.totalTrips || 0,
+        totalCO2SavedKg: Math.round((u.totalCO2Saved || 0) / 1000),
+        totalDistanceKm: Math.round(u.totalDistanceKm || 0),
+        carpoolsJoined: u.carpoolsJoined || 0,
+      })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── Users ───────────────────────────────────────────────────────────────────
 exports.listUsers = async (req, res, next) => {
   try {

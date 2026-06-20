@@ -8,6 +8,7 @@ router.use(protect, requireAdmin);
 
 // Shared (any admin)
 router.get('/stats',           adminController.getStats);
+router.get('/reports',         adminController.getReports);
 router.get('/users',           adminController.listUsers);
 router.get('/users/:id',       adminController.getUser);
 router.post('/users/:id/block',   adminController.blockUser);
