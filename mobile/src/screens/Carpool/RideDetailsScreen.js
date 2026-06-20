@@ -24,6 +24,11 @@ const RideDetailsScreen = ({ ride, onClose, onCancelled, onMessages }) => {
   const cancellable = ['pending', 'matching', 'matched'].includes(ride.status);
   const matchedCount = (ride.matchedWith || []).length;
 
+  const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+  const msToDeparture = new Date(ride.departureTime).getTime() - Date.now();
+  const withinDeleteWindow = msToDeparture >= 0 && msToDeparture < SIX_HOURS_MS;
+  const canDelete = cancellable && !withinDeleteWindow;
+
   const cancel = () => {
     Alert.alert('Cancel ride', 'This will cancel your ride. Continue?', [
       { text: 'Keep', style: 'cancel' },
@@ -70,7 +75,16 @@ const RideDetailsScreen = ({ ride, onClose, onCancelled, onMessages }) => {
         </View>
 
         <Button title="💬 Open messages" variant="ghost" onPress={onMessages} />
-        {cancellable && <Button title="Cancel ride" variant="danger" onPress={cancel} loading={cancelling} />}
+        {cancellable && (
+          canDelete ? (
+            <Button title="Cancel ride" variant="danger" onPress={cancel} loading={cancelling} />
+          ) : (
+            <View>
+              <Button title="Cancel ride" variant="danger" onPress={cancel} loading={cancelling} disabled />
+              <Text style={styles.windowNote}>Rides can only be deleted more than 6 hours before departure.</Text>
+            </View>
+          )
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -90,6 +104,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   rowLabel: { color: colors.textSubtle, width: 90, fontSize: font.small },
   rowValue: { color: colors.text, flex: 1, textAlign: 'right', fontSize: font.small },
+  windowNote: { color: colors.textSubtle, fontSize: font.tiny, textAlign: 'center', marginTop: 6 },
 });
 
 export default RideDetailsScreen;
