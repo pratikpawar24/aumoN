@@ -13,28 +13,36 @@ const Stat = ({ icon: Icon, label, value }) => (
   </div>
 );
 
+const downloadCsv = (filename, header, rows) => {
+  const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+  const body = rows.map((r) => r.map(esc).join(',')).join('\n');
+  const blob = new Blob([[header, body].join('\n')], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+};
+
 const AdminReports = () => {
   const [data, setData] = useState(null);
+  const [scheduled, setScheduled] = useState(null);
+  const [searches, setSearches] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    adminService.getReports()
-      .then(setData)
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    adminService.getReports().then(setData).catch(() => {});
+    adminService.getScheduledReport({ limit: 200 }).then(setScheduled).catch(() => {});
+    adminService.getSearchesReport().then(setSearches).catch(() => {});
+    setLoading(false);
   }, []);
 
   const exportCsv = () => {
     if (!data) return;
-    const header = 'Name,Email,Trips,CO2 saved (kg),Distance (km),Carpools joined';
-    const rows = data.topUsers.map((u) =>
-      [u.name, u.email, u.totalTrips, u.totalCO2SavedKg, u.totalDistanceKm, u.carpoolsJoined]
-        .map((v) => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
-    const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'aumon-user-report.csv'; a.click();
-    URL.revokeObjectURL(url);
+    downloadCsv(
+      'aumon-user-report.csv',
+      'Name,Email,Trips,CO2 saved (kg),Distance (km),Carpools joined',
+      data.topUsers.map((u) => [u.name, u.email, u.totalTrips, u.totalCO2SavedKg, u.totalDistanceKm, u.carpoolsJoined]),
+    );
   };
 
   if (loading) return <div className="flex justify-center py-12"><Spinner /></div>;
@@ -63,6 +71,8 @@ const AdminReports = () => {
         <Stat icon={Route} label="Distance (km)" value={app.totalDistanceKm} />
         <Stat icon={Leaf} label="CO₂ saved (kg)" value={app.totalCO2SavedKg} />
         <Stat icon={Car} label="Carpool rides" value={app.carpoolRides} />
+        <Stat icon={Route} label="Rides searched" value={searches?.total ?? data?.searches?.total ?? 0} />
+        <Stat icon={Car} label="Scheduled rides" value={data?.scheduled?.total ?? 0} />
       </div>
 
       <div className="rounded-xl border border-indigo-500/20 overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)' }}>
@@ -90,6 +100,48 @@ const AdminReports = () => {
                   <td className="px-4 py-2 text-green-400">{u.totalCO2SavedKg}</td>
                   <td className="px-4 py-2 text-slate-300">{u.totalDistanceKm}</td>
                   <td className="px-4 py-2 text-slate-300">{u.carpoolsJoined}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-indigo-500/20 overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <div className="px-4 py-3 border-b border-indigo-500/20 flex items-center justify-between">
+          <h2 className="font-semibold text-white">Scheduled rides ({scheduled?.total ?? 0})</h2>
+          <button
+            onClick={() => scheduled && downloadCsv(
+              'aumon-scheduled-rides.csv',
+              'Rider,Email,Pickup,Dropoff,Departure,Role,Status,Seats,Fare',
+              scheduled.rides.map((r) => [r.riderName, r.riderEmail, r.pickup, r.dropoff,
+                new Date(r.departureTime).toLocaleString(), r.role, r.status, r.seats, r.price ?? '']),
+            )}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20">
+            <Download className="w-4 h-4" />CSV
+          </button>
+        </div>
+        <div className="overflow-x-auto max-h-[480px]">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-slate-400 border-b border-white/5">
+                <th className="px-4 py-2 font-medium">Rider</th>
+                <th className="px-4 py-2 font-medium">Route</th>
+                <th className="px-4 py-2 font-medium">Departure</th>
+                <th className="px-4 py-2 font-medium">Role</th>
+                <th className="px-4 py-2 font-medium">Status</th>
+                <th className="px-4 py-2 font-medium">Fare</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(scheduled?.rides || []).map((r) => (
+                <tr key={r._id} className="border-b border-white/5">
+                  <td className="px-4 py-2 text-white">{r.riderName}<span className="block text-xs text-slate-500">{r.riderEmail}</span></td>
+                  <td className="px-4 py-2 text-slate-300 max-w-[260px] truncate">{r.pickup} → {r.dropoff}</td>
+                  <td className="px-4 py-2 text-slate-300">{new Date(r.departureTime).toLocaleString()}</td>
+                  <td className="px-4 py-2 text-slate-300">{r.role}</td>
+                  <td className="px-4 py-2 text-slate-300">{r.status}</td>
+                  <td className="px-4 py-2 text-slate-300">{r.price != null ? `₹${r.price}` : '—'}</td>
                 </tr>
               ))}
             </tbody>

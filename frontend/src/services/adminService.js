@@ -11,6 +11,8 @@ const adminService = {
   removeUser: async (id) => (await api.delete(`/api/admin/users/${id}`)).data,
   activeRides: async () => (await api.get('/api/admin/rides/active')).data,
   getReports: async () => (await api.get('/api/admin/reports')).data,
+  getSearchesReport: async (params = {}) => (await api.get('/api/admin/reports/searches', { params })).data,
+  getScheduledReport: async (params = {}) => (await api.get('/api/admin/reports/scheduled', { params })).data,
 
   // Master only
   listAdmins: async () => (await api.get('/api/admin/admins')).data,
