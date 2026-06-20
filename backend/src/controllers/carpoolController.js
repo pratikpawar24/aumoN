@@ -230,7 +230,10 @@ exports.getCarpoolHistory = async (req, res, next) => {
     if (status) {
       filter.status = { $in: status.split(',').map((s) => s.trim()) };
     } else {
-      filter.status = { $in: ['completed', 'matched', 'cancelled'] };
+      // Default: every ride the user has touched, including freshly-scheduled
+      // (pending) and matching ones — these were previously hidden, which made
+      // a just-scheduled ride look like it vanished.
+      filter.status = { $in: ['pending', 'matching', 'matched', 'completed', 'cancelled'] };
     }
 
     if (role && ['driver', 'passenger'].includes(role)) {
