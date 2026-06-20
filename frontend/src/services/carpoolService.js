@@ -50,6 +50,28 @@ const carpoolService = {
     const res = await api.post(`/api/chat/${rideId}/confirm`, { passengerId, agreedPrice });
     return res.data;
   },
+
+  // ── Seat bookings ──────────────────────────────────────────────────────────
+  bookRide: async (rideId, seats) => {
+    const res = await api.post(`/api/carpool/rides/${rideId}/book`, { seats });
+    return res.data;
+  },
+  listBookings: async () => {
+    const res = await api.get('/api/carpool/bookings');
+    return res.data;
+  },
+  confirmBooking: async (id) => {
+    const res = await api.patch(`/api/carpool/bookings/${id}/confirm`);
+    return res.data;
+  },
+  declineBooking: async (id) => {
+    const res = await api.patch(`/api/carpool/bookings/${id}/decline`);
+    return res.data;
+  },
+  cancelBooking: async (id) => {
+    const res = await api.patch(`/api/carpool/bookings/${id}/cancel`);
+    return res.data;
+  },
 };
 
 export default carpoolService;
