@@ -74,8 +74,7 @@ const ProfilePage = () => {
   };
 
   return (
-    <div className="min-h-screen pt-20 pb-8 px-4"
-         style={{ background: '#0f172a' }}>
+    <div className="aumo-page">
       <div className="max-w-lg mx-auto space-y-6">
         <h1 className="text-2xl font-bold text-white flex items-center gap-2">
           <User className="w-6 h-6 text-green-400" />

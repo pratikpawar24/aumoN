@@ -105,7 +105,7 @@ const DashboardPage = () => {
   const [tab, setTab] = useState('analytics');
 
   return (
-    <div className="min-h-screen aumo-bg-page pt-20 pb-8 px-4">
+    <div className="aumo-page">
       <div className="max-w-5xl mx-auto space-y-5">
         {/* Header */}
         {user && (

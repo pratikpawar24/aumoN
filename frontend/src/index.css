@@ -31,6 +31,20 @@
   .aumo-bg-input     { background: var(--aumo-input-bg); }
   .aumo-bg-nav       { background: var(--aumo-nav-bg); }
   .aumo-bg-overlay   { background: var(--aumo-overlay); }
+  /* Consistent responsive page shell: same top padding (clears the fixed
+     navbar), horizontal gutters that shrink on phones, and a centred column. */
+  .aumo-page {
+    min-height: 100vh;
+    background: var(--aumo-bg-page);
+    padding-top: 5rem;
+    padding-bottom: 2rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  @media (min-width: 640px) {
+    .aumo-page { padding-left: 1.5rem; padding-right: 1.5rem; }
+  }
+  .aumo-page-inner { max-width: 42rem; margin-left: auto; margin-right: auto; }
   .aumo-text-primary { color: var(--aumo-text-primary); }
   .aumo-text-muted   { color: var(--aumo-text-muted); }
   .aumo-text-subtle  { color: var(--aumo-text-subtle); }
