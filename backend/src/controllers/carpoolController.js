@@ -214,6 +214,20 @@ exports.cancelRequest = async (req, res, next) => {
     if (['completed', 'cancelled'].includes(request.status)) {
       return res.status(400).json({ success: false, message: `Cannot cancel a ${request.status} request.` });
     }
+
+    // A ride can only be deleted more than 6 hours before departure (both
+    // roles). The window is the 0–6h pre-departure band; rides already in the
+    // past stay cancellable for housekeeping.
+    const SIX_HOURS_MS = 6 * 60 * 60 * 1000;
+    const msToDeparture = new Date(request.departureTime).getTime() - Date.now();
+    if (msToDeparture >= 0 && msToDeparture < SIX_HOURS_MS) {
+      return res.status(400).json({
+        success: false,
+        code: 'CANCEL_WINDOW',
+        message: 'Rides can only be deleted more than 6 hours before departure.',
+      });
+    }
+
     request.status = 'cancelled';
     await request.save();
     res.json({ success: true, message: 'Request cancelled.' });
