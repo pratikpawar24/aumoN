@@ -110,15 +110,15 @@ const MapPage = () => {
         onClick={() => setPanelOpen((p) => !p)}
         aria-label={panelOpen ? 'Hide route panel' : 'Show route panel'}
         className="absolute top-1/2 -translate-y-1/2 z-40
-                   w-8 md:w-6 h-20 md:h-16
-                   border aumo-border rounded-r-lg aumo-bg-nav
+                   w-9 md:w-7 h-20 md:h-16
+                   rounded-r-lg bg-green-500 hover:bg-green-600
                    flex items-center justify-center
-                   aumo-text-subtle hover:aumo-text-primary transition-all shadow-md"
+                   text-white shadow-lg shadow-green-500/30 transition-all"
         style={{ left: toggleLeft }}
       >
         {panelOpen
-          ? <ChevronLeft className="w-4 h-4" />
-          : <ChevronRight className="w-4 h-4" />}
+          ? <ChevronLeft className="w-5 h-5" />
+          : <ChevronRight className="w-5 h-5" />}
       </button>
 
       {/* Map — always fills the remaining space (full width on mobile) */}
@@ -130,13 +130,14 @@ const MapPage = () => {
           <div className="relative">
             <button
               onClick={() => setLayerOpen((p) => !p)}
-              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl border aumo-border
-                         aumo-bg-nav flex items-center justify-center
-                         aumo-text-subtle hover:aumo-text-primary transition-all shadow-md"
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-xl
+                         bg-green-500 hover:bg-green-600 text-white
+                         flex items-center justify-center transition-all
+                         shadow-lg shadow-green-500/30"
               title="Map layers"
               aria-label="Map layers"
             >
-              <Layers className="w-4 h-4" />
+              <Layers className="w-5 h-5" />
             </button>
 
             {layerOpen && (
