@@ -84,6 +84,25 @@
   border-radius: 8px !important;
 }
 
+/* Page shell: top padding clears the fixed navbar (h-16 = 4rem) so page
+   content never renders underneath it. Plain CSS (not @layer/@tailwind) so it
+   is never tree-shaken. Carpool / Dashboard / Profile wrap their content in
+   this class. */
+.aumo-page {
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 2rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+@media (min-width: 640px) {
+  .aumo-page {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+}
+
 /* Map panel responsive */
 .map-panel {
   position: absolute;
