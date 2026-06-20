@@ -64,7 +64,8 @@ exports.getStats = async (req, res, next) => {
 // ── Reports: app-wide + per-user rollups ─────────────────────────────────────
 exports.getReports = async (req, res, next) => {
   try {
-    const [userAgg, carpoolRides, topUsers] = await Promise.all([
+    const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const [userAgg, carpoolRides, topUsers, searchTotal, searchDaily, scheduledByStatus, scheduledByRole] = await Promise.all([
       User.aggregate([
         { $match: { role: 'user' } },
         {
@@ -85,9 +86,18 @@ exports.getReports = async (req, res, next) => {
         .sort({ totalCO2Saved: -1 })
         .limit(50)
         .lean(),
+      Ride.countDocuments({}),
+      Ride.aggregate([
+        { $match: { createdAt: { $gte: since30d } } },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      CarpoolRequest.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
+      CarpoolRequest.aggregate([{ $group: { _id: '$role', count: { $sum: 1 } } }]),
     ]);
 
     const a = userAgg[0] || {};
+    const toMap = (arr) => arr.reduce((m, x) => { m[x._id || 'unknown'] = x.count; return m; }, {});
     res.json({
       success: true,
       app: {
@@ -99,6 +109,15 @@ exports.getReports = async (req, res, next) => {
         totalCO2SavedKg: Math.round((a.totalCO2SavedG || 0) / 1000),
         carpoolRides,
       },
+      searches: {
+        total: searchTotal,
+        last30dDaily: searchDaily.map((d) => ({ date: d._id, count: d.count })),
+      },
+      scheduled: {
+        total: carpoolRides,
+        byStatus: toMap(scheduledByStatus),
+        byRole: toMap(scheduledByRole),
+      },
       topUsers: topUsers.map((u) => ({
         _id: u._id,
         name: u.name,
@@ -109,6 +128,88 @@ exports.getReports = async (req, res, next) => {
         carpoolsJoined: u.carpoolsJoined || 0,
       })),
     });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Reports: route-search breakdown (from durable Ride records) ───────────────
+exports.getSearchesReport = async (req, res, next) => {
+  try {
+    const { from, to } = req.query;
+    const match = {};
+    if (from || to) {
+      match.createdAt = {};
+      if (from) match.createdAt.$gte = new Date(from);
+      if (to) match.createdAt.$lte = new Date(to);
+    }
+    const [total, daily, byVehicleType, byOptimizeFor] = await Promise.all([
+      Ride.countDocuments(match),
+      Ride.aggregate([
+        { $match: match },
+        { $group: { _id: { $dateToString: { format: '%Y-%m-%d', date: '$createdAt' } }, count: { $sum: 1 } } },
+        { $sort: { _id: 1 } },
+      ]),
+      Ride.aggregate([
+        { $match: match },
+        { $group: { _id: '$vehicleType', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+      Ride.aggregate([
+        { $match: match },
+        { $group: { _id: '$optimizeFor', count: { $sum: 1 } } },
+        { $sort: { count: -1 } },
+      ]),
+    ]);
+    res.json({
+      success: true,
+      total,
+      daily: daily.map((d) => ({ date: d._id, count: d.count })),
+      byVehicleType: byVehicleType.map((d) => ({ type: d._id || 'unknown', count: d.count })),
+      byOptimizeFor: byOptimizeFor.map((d) => ({ mode: d._id || 'unknown', count: d.count })),
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// ── Reports: scheduled carpool rides in detail ───────────────────────────────
+exports.getScheduledReport = async (req, res, next) => {
+  try {
+    const { from, to, status, role, page = 1, limit = 50 } = req.query;
+    const filter = {};
+    if (status) filter.status = { $in: String(status).split(',').map((s) => s.trim()) };
+    if (role && ['driver', 'passenger'].includes(role)) filter.role = role;
+    if (from || to) {
+      filter.departureTime = {};
+      if (from) filter.departureTime.$gte = new Date(from);
+      if (to) filter.departureTime.$lte = new Date(to);
+    }
+    const lim = Math.min(parseInt(limit, 10) || 50, 200);
+    const skip = (parseInt(page, 10) - 1) * lim;
+    const [docs, total] = await Promise.all([
+      CarpoolRequest.find(filter)
+        .sort({ departureTime: -1 })
+        .skip(skip)
+        .limit(lim)
+        .populate('userId', 'name email')
+        .lean(),
+      CarpoolRequest.countDocuments(filter),
+    ]);
+    const rides = docs.map((r) => ({
+      _id: r._id,
+      riderName: r.userId?.name || '',
+      riderEmail: r.userId?.email || '',
+      pickup: r.pickup?.address || `${r.pickup?.lat},${r.pickup?.lng}`,
+      dropoff: r.dropoff?.address || `${r.dropoff?.lat},${r.dropoff?.lng}`,
+      departureTime: r.departureTime,
+      role: r.role,
+      status: r.status,
+      seats: r.role === 'driver' ? r.seatsAvailable : r.seatsNeeded,
+      price: r.price,
+      createdAt: r.createdAt,
+    }));
+    res.json({ success: true, total, rides, pagination: { page: parseInt(page, 10), limit: lim, total } });
   } catch (err) {
     next(err);
   }
