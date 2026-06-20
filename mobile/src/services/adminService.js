@@ -10,6 +10,9 @@ export const adminService = {
   unblockUser: async (id) => (await api.post(`/api/admin/users/${id}/unblock`)).data,
   removeUser: async (id) => (await api.delete(`/api/admin/users/${id}`)).data,
   activeRides: async () => (await api.get('/api/admin/rides/active')).data,
+  getReports: async () => (await api.get('/api/admin/reports')).data,
+  getSearchesReport: async (params = {}) => (await api.get('/api/admin/reports/searches', { params })).data,
+  getScheduledReport: async (params = {}) => (await api.get('/api/admin/reports/scheduled', { params })).data,
 };
 
 export default adminService;
