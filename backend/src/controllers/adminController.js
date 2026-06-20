@@ -122,7 +122,13 @@ exports.getUser = async (req, res, next) => {
       { $sort: { _id: 1 } },
     ]);
 
-    res.json({ success: true, user, rides, series });
+    // Carpool requests this user scheduled/joined (last 50, newest first).
+    const carpools = await CarpoolRequest.find({ userId: user._id })
+      .sort({ createdAt: -1 })
+      .limit(50)
+      .lean();
+
+    res.json({ success: true, user, rides, series, carpools });
   } catch (err) {
     next(err);
   }

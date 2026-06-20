@@ -15,6 +15,7 @@ const AdminUserDetail = () => {
   const [user, setUser] = useState(null);
   const [rides, setRides] = useState([]);
   const [series, setSeries] = useState([]);
+  const [carpools, setCarpools] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -23,6 +24,7 @@ const AdminUserDetail = () => {
       const data = await adminService.getUser(id);
       setUser(data.user);
       setRides(data.rides || []);
+      setCarpools(data.carpools || []);
       setSeries((data.series || []).map((d) => ({
         date: d._id,
         co2: Math.round((d.co2Saved || 0) / 1000 * 10) / 10,
@@ -219,6 +221,35 @@ const AdminUserDetail = () => {
                   <span>{Math.round(r.timeMinutes)} min</span>
                   <span>−{Math.round((r.co2Saved || 0) / 1000)} kg CO₂</span>
                   <span className="ml-auto">{new Date(r.createdAt).toLocaleDateString()}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Carpool rides */}
+      <div className="rounded-xl border border-indigo-500/20 p-4"
+           style={{ background: 'rgba(255,255,255,0.03)' }}>
+        <h2 className="font-semibold text-white mb-3">Carpool rides</h2>
+        {carpools.length === 0 ? (
+          <p className="text-sm text-slate-500 py-4 text-center">No carpool rides.</p>
+        ) : (
+          <div className="space-y-2 max-h-96 overflow-y-auto">
+            {carpools.map((c) => (
+              <div key={c._id}
+                   className="text-xs p-2 rounded-lg border border-white/5"
+                   style={{ background: 'rgba(255,255,255,0.02)' }}>
+                <div className="flex items-center justify-between">
+                  <p className="text-white truncate">
+                    {c.pickup?.address?.split(',')[0] || 'Pickup'} → {c.dropoff?.address?.split(',')[0] || 'Drop-off'}
+                  </p>
+                  <span className="text-indigo-300 capitalize ml-2 flex-shrink-0">{c.status}</span>
+                </div>
+                <div className="flex gap-3 text-slate-400 mt-0.5">
+                  <span>{c.role}</span>
+                  <span>{c.role === 'driver' ? `${c.seatsAvailable} seats` : `${c.seatsNeeded} needed`}</span>
+                  <span className="ml-auto">{new Date(c.departureTime).toLocaleDateString()}</span>
                 </div>
               </div>
             ))}
