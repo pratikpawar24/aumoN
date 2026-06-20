@@ -1,19 +1,22 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import { formatDistance, formatDuration, formatEmission, apiError } from '../../utils/helpers';
 import routeService from '../../services/routeService';
 import tripService from '../../services/tripService';
 import locationService from '../../services/locationService';
+import mapService from '../../services/mapService';
 import LocationSearchInput from '../../components/common/LocationSearchInput';
 import LeafletMap from '../../components/map/LeafletMap';
+import MapBottomSheet from '../../components/map/MapBottomSheet';
 
 const dedupeKey = (r) => `${Math.round((r.total_distance_km || 0) * 10)}-${Math.round(r.total_time_minutes || 0)}`;
 
 const MapScreen = () => {
   const watchRef = useRef(null);
+  const insets = useSafeAreaInsets();
 
   const [origin, setOrigin] = useState(null);
   const [destination, setDestination] = useState(null);
@@ -74,6 +77,18 @@ const MapScreen = () => {
     }
   }, []);
 
+  // Tap the map to drop a pin: fills the first empty endpoint (origin, then
+  // destination) and reverse-geocodes it to a readable address.
+  const onMapTap = useCallback(async (latlng) => {
+    let address = `${latlng.lat.toFixed(5)}, ${latlng.lng.toFixed(5)}`;
+    try {
+      const place = await mapService.reverseGeocode(latlng.lat, latlng.lng);
+      address = place?.address || place?.display || place?.name || address;
+    } catch (_) { /* keep coordinate fallback */ }
+    const point = { lat: latlng.lat, lng: latlng.lng, address };
+    if (!origin) setOrigin(point); else setDestination(point);
+  }, [origin]);
+
   const startTrip = useCallback(async () => {
     const route = routes[selected];
     if (!route || !origin || !destination) return;
@@ -123,12 +138,26 @@ const MapScreen = () => {
             centerToken={centerToken}
             follow={!!trip}
             onSelectRoute={selectRoute}
+            onMapTap={onMapTap}
           />
         </View>
 
-        {/* Search / controls card */}
-        <View style={styles.panel} pointerEvents="box-none">
-          <View style={styles.card}>
+        {/* Top search pill */}
+        <View style={[styles.topBar, { top: insets.top + spacing.sm }]} pointerEvents="box-none">
+          <View style={styles.searchPill}>
+            <Ionicons name="search" size={18} color={colors.textSubtle} />
+            <Text style={styles.searchPillText} numberOfLines={1}>
+              {origin && destination ? `${origin.address?.split(',')[0]} → ${destination.address?.split(',')[0]}` : 'Search or tap the map'}
+            </Text>
+          </View>
+        </View>
+
+        <TouchableOpacity style={[styles.fab, { bottom: 150 + insets.bottom + 76 }]} onPress={recenter}>
+          <Ionicons name="locate" size={22} color={colors.primary} />
+        </TouchableOpacity>
+
+        <MapBottomSheet collapsedHeight={150}>
+          <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <LocationSearchInput label="From" placeholder="Origin" value={origin?.address} dotColor={colors.primary} onSelect={setOrigin} />
             <LocationSearchInput label="To" placeholder="Destination" value={destination?.address} dotColor={colors.danger} onSelect={setDestination} />
             <View style={styles.modes}>
@@ -141,40 +170,32 @@ const MapScreen = () => {
             <TouchableOpacity style={styles.calcBtn} onPress={calculate} disabled={loading}>
               {loading ? <ActivityIndicator color="#04210f" /> : <Text style={styles.calcText}>Find route</Text>}
             </TouchableOpacity>
-          </View>
-        </View>
 
-        <TouchableOpacity style={styles.fab} onPress={recenter}>
-          <Ionicons name="locate" size={22} color={colors.primary} />
-        </TouchableOpacity>
-
-        {routes.length > 0 && !trip && (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.cards} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: 10 }}>
-            {routes.map((r, i) => (
-              <TouchableOpacity key={i} style={[styles.routeCard, i === selected && styles.routeCardOn]} onPress={() => selectRoute(i)}>
-                <Text style={styles.routeName}>{r.label || (r.profile === 'time' ? 'Fastest' : r.profile === 'carbon' ? 'Eco' : `Route ${i + 1}`)}</Text>
-                <Text style={styles.routeMeta}>🕑 {formatDuration(r.total_time_minutes)}  ·  📏 {formatDistance(r.total_distance_km)}</Text>
-                <Text style={styles.routeCo2}>{formatEmission(r.total_emissions_g)} CO₂</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
-
-        {routes.length > 0 && (
-          <View style={styles.tripBar}>
-            {trip && progress ? (
-              <View style={{ flex: 1 }}>
-                <Text style={styles.tripText}>{progress.remainingKm?.toFixed(1)} km left{etaMin != null ? `  ·  ~${etaMin} min` : ''}</Text>
-                <View style={styles.barTrack}><View style={[styles.barFill, { width: `${progress.progressPercent || 0}%` }]} /></View>
+            {routes.length > 0 && (
+              <View style={styles.routeList}>
+                {routes.map((r, i) => (
+                  <TouchableOpacity key={i} style={[styles.routeRow, i === selected && styles.routeRowOn]} onPress={() => selectRoute(i)}>
+                    <Text style={styles.routeName}>{r.label || (r.profile === 'time' ? 'Fastest' : r.profile === 'carbon' ? 'Eco' : `Route ${i + 1}`)}</Text>
+                    <Text style={styles.routeMeta}>🕑 {formatDuration(r.total_time_minutes)} · 📏 {formatDistance(r.total_distance_km)} · {formatEmission(r.total_emissions_g)} CO₂</Text>
+                  </TouchableOpacity>
+                ))}
+                <View style={styles.tripRow}>
+                  {trip && progress ? (
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.tripText}>{progress.remainingKm?.toFixed(1)} km left{etaMin != null ? ` · ~${etaMin} min` : ''}</Text>
+                      <View style={styles.barTrack}><View style={[styles.barFill, { width: `${progress.progressPercent || 0}%` }]} /></View>
+                    </View>
+                  ) : (
+                    <Text style={styles.tripText}>{routes[selected]?.label || 'Route ready'} · tap Start to track</Text>
+                  )}
+                  <TouchableOpacity style={[styles.tripBtn, trip && styles.tripBtnStop]} onPress={trip ? stopTrip : startTrip}>
+                    <Text style={styles.tripBtnText}>{trip ? '⏹ Stop' : '▶ Start'}</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            ) : (
-              <Text style={styles.tripText}>{routes[selected]?.label || 'Route ready'} · tap Start to track</Text>
             )}
-            <TouchableOpacity style={[styles.tripBtn, trip && styles.tripBtnStop]} onPress={trip ? stopTrip : startTrip}>
-              <Text style={styles.tripBtnText}>{trip ? '⏹ Stop' : '▶ Start'}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          </ScrollView>
+        </MapBottomSheet>
       </View>
     </SafeAreaView>
   );
@@ -183,8 +204,9 @@ const MapScreen = () => {
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   fill: { flex: 1 },
-  panel: { position: 'absolute', top: spacing.sm, left: spacing.lg, right: spacing.lg },
-  card: { backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  topBar: { position: 'absolute', left: spacing.lg, right: spacing.lg },
+  searchPill: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.surface, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, paddingHorizontal: 16, paddingVertical: 12 },
+  searchPillText: { color: colors.text, flex: 1 },
   modes: { flexDirection: 'row', gap: 10, marginBottom: spacing.md },
   mode: { flex: 1, alignItems: 'center', paddingVertical: 12, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border },
   modeOn: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
@@ -192,14 +214,13 @@ const styles = StyleSheet.create({
   modeTextOn: { color: colors.primary },
   calcBtn: { backgroundColor: colors.primary, borderRadius: radius.md, paddingVertical: 14, alignItems: 'center' },
   calcText: { color: '#04210f', fontWeight: '800', fontSize: font.body },
-  fab: { position: 'absolute', right: spacing.lg, bottom: 190, width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
-  cards: { position: 'absolute', bottom: 96, left: 0, right: 0 },
-  routeCard: { backgroundColor: colors.surface, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, padding: spacing.md, minWidth: 170 },
-  routeCardOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
+  fab: { position: 'absolute', right: spacing.lg, width: 48, height: 48, borderRadius: 24, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
+  routeList: { marginTop: spacing.md, gap: 8 },
+  routeRow: { padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg },
+  routeRowOn: { borderColor: colors.primary, backgroundColor: colors.primarySoft },
   routeName: { color: colors.text, fontWeight: '700', marginBottom: 4 },
   routeMeta: { color: colors.textSubtle, fontSize: font.small },
-  routeCo2: { color: colors.primary, fontSize: font.small, marginTop: 4 },
-  tripBar: { position: 'absolute', bottom: spacing.lg, left: spacing.lg, right: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.surface, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, padding: spacing.md },
+  tripRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: spacing.sm },
   tripText: { color: colors.text, fontWeight: '600', flex: 1 },
   barTrack: { height: 6, backgroundColor: colors.border, borderRadius: 3, marginTop: 6, overflow: 'hidden' },
   barFill: { height: 6, backgroundColor: colors.primary },
