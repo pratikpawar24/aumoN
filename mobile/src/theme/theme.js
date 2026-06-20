@@ -31,3 +31,7 @@ export const radius = {
 export const font = {
   h1: 28, h2: 22, h3: 18, body: 15, small: 13, tiny: 11,
 };
+
+// Height of the bottom tab bar (see MainNavigator tabBarStyle.height) — screens
+// add this (+ safe-area bottom inset) as content padding so nothing hides under it.
+export const TAB_BAR_HEIGHT = 60;

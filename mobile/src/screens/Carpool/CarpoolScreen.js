@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, Modal } from 'react-native';
+import { View, Text, StyleSheet, Modal, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
@@ -52,9 +52,9 @@ const CarpoolScreen = () => {
 
       <View style={styles.tabs}>
         {TABS.map((t) => (
-          <Text key={t.k} onPress={() => setTab(t.k)} style={[styles.tab, tab === t.k && styles.tabOn]}>
-            {t.label}
-          </Text>
+          <TouchableOpacity key={t.k} onPress={() => setTab(t.k)} style={[styles.tab, tab === t.k && styles.tabOn]}>
+            <Text style={[styles.tabText, tab === t.k && styles.tabTextOn]}>{t.label}</Text>
+          </TouchableOpacity>
         ))}
       </View>
 
@@ -101,12 +101,11 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
   title: { color: colors.text, fontSize: font.h2, fontWeight: '800' },
   sub: { color: colors.textSubtle, marginTop: 2 },
-  tabs: { flexDirection: 'row', gap: 6, padding: spacing.lg },
-  tab: {
-    flex: 1, textAlign: 'center', paddingVertical: 10, borderRadius: radius.md,
-    backgroundColor: colors.surface, color: colors.textSubtle, fontWeight: '700', overflow: 'hidden', fontSize: font.small,
-  },
-  tabOn: { backgroundColor: colors.primary, color: '#04210f' },
+  tabs: { flexDirection: 'row', gap: 6, paddingHorizontal: spacing.lg, paddingVertical: spacing.md },
+  tab: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.surface },
+  tabOn: { backgroundColor: colors.primary },
+  tabText: { color: colors.textSubtle, fontWeight: '700', fontSize: font.small },
+  tabTextOn: { color: '#04210f' },
   body: { flex: 1 },
 });
 
