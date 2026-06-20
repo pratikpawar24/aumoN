@@ -42,3 +42,17 @@ export const toLatLngList = (geometry = []) =>
 
 export const apiError = (err, fallback = 'Something went wrong') =>
   err?.response?.data?.message || err?.message || fallback;
+
+// Cab-style client estimates. ETA assumes ~28 km/h urban average; fare uses the
+// same ₹4/km convention as ScheduleRide. Both are estimates only — when a driver
+// has set a price, prefer that actual fare in the UI.
+export const estimateEtaMinutes = (pickup, dropoff) => {
+  if (!pickup || !dropoff) return null;
+  const km = haversineKm(pickup, dropoff);
+  return Math.max(2, Math.round((km / 28) * 60));
+};
+
+export const estimateFare = (pickup, dropoff) => {
+  if (!pickup || !dropoff) return null;
+  return Math.round(haversineKm(pickup, dropoff) * 4);
+};
