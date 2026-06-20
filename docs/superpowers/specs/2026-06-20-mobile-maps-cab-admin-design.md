@@ -93,21 +93,17 @@ This is presentation only, layered over the existing endpoints (`getAvailable`, 
 
 ## Workstream 5 — Admin detailed reports + CSV (mobile + web)
 
-**Files:** `backend/src/controllers/adminController.js`, `backend/src/routes/adminRoutes.js`, a new `backend/src/models/SearchLog.js` and a hook in `backend/src/controllers/routeController.js`; `mobile/src/services/adminService.js` + `mobile/src/screens/Admin/AdminScreen.js`; `frontend/src/services/adminService.js` + `frontend/src/pages/admin/AdminReports.jsx`.
+**Files:** `backend/src/controllers/adminController.js`, `backend/src/routes/adminRoutes.js`; `mobile/src/services/adminService.js` + `mobile/src/screens/Admin/AdminScreen.js`; `frontend/src/services/adminService.js` + `frontend/src/pages/admin/AdminReports.jsx`. No new model.
 
-### 5.1 "Rides searched in total" — durable search logging (backend)
-**Problem:** the `Route` collection has a **7-day TTL** (`cachedAt` `expireAfterSeconds: 604800`) and is deduped per user, so it cannot give an honest historical "total searches" count.
+### 5.1 "Rides searched in total" — use the existing `Ride` collection (backend)
+**Correction to an earlier assumption:** the 7-day TTL belongs to the `Route` *cache* model, **not** to searches. Every authenticated route calculation already persists a durable **`Ride`** document in `routeController.calculateRoute` (no TTL), and `adminController.getStats` already counts it as total rides. So **no new `SearchLog` model is needed** — "total rides searched" = `Ride` documents, with a daily/aspect breakdown via aggregation.
 
-**Solution:** add a lightweight, append-only **`SearchLog`** model written once per route calculation:
-```
-SearchLog { userId, originAddress, destAddress, distanceKm, optimizeFor, vehicleType, createdAt }
-```
-Write it in `routeController.calculate` (the durable backend hook hit by both web and mobile via `/api/routes/calculate`). It is never TTL'd, so totals accumulate. (No new index beyond `createdAt`.)
+Caveat (acceptable): unauthenticated calls or calls with `saveRoute:false` (e.g. the secondary "paired" route the mobile MapScreen fetches) do not create a `Ride`, so the metric counts saved user searches, which is the meaningful number. This matches the existing `getStats` definition of "rides".
 
 ### 5.2 Report endpoints (backend)
 Extend the admin reports surface (keep existing `/api/admin/reports` working; add detail endpoints):
 - `GET /api/admin/reports` — keep current app rollup + topUsers; **add** `searches.total`, `searches.last30dDaily[]`, and `scheduled` summary (counts by status and by role).
-- `GET /api/admin/reports/searches` — total + daily breakdown (from `SearchLog`), optional `from`/`to`.
+- `GET /api/admin/reports/searches` — total + daily breakdown (from `Ride`), optional `from`/`to`, plus by-vehicleType and by-optimizeFor aggregates.
 - `GET /api/admin/reports/scheduled` — every `CarpoolRequest` in detail (rider name/email via populate, pickup/drop addresses, departureTime, role, status, seats, fare), paginated, with `from`/`to`/`status`/`role` filters.
 - All under the existing `protect, requireAdmin` middleware.
 
@@ -128,7 +124,7 @@ Extend the admin reports surface (keep existing `/api/admin/reports` working; ad
 - **Map:** RN `MapScreen` → `LeafletMap` WebView via `injectJavaScript(window.AUMO.update(...))`; WebView → RN via `postMessage` (`ready`, `routeTap`, new `mapTap`). Reverse-geocode through existing `mapService`/`locationService`.
 - **Cab interface:** carpool screens → existing `carpoolService` endpoints; fare/ETA from new pure helpers in `helpers.js`. No new server contract.
 - **Delete rule:** mobile/web → `PATCH /api/carpool/request/:id/cancel` → server-enforced 6h window.
-- **Admin reports:** clients → `adminService` → `/api/admin/reports*`; `Route` calculation → writes `SearchLog`. CSV built client-side in each client.
+- **Admin reports:** clients → `adminService` → `/api/admin/reports*`; "rides searched" derives from the existing `Ride` collection, "scheduled rides" from `CarpoolRequest`. CSV built client-side in each client.
 
 ## Testing / verification
 
@@ -136,7 +132,7 @@ Repo has no automated test harness (per CLAUDE.md). Verification is manual:
 - Map: light tiles, pins, two-tone route, tap-to-drop, no overlap on a 360×640 viewport; recenter works; trip tracking still functions.
 - Cab UI: ride cards show fare/ETA; Book opens sheet and creates a request; status strip reflects real status.
 - Delete rule: cancelling a ride >6h out succeeds; <6h out returns the 400 message on both web and mobile; UI disables the button.
-- Admin: `SearchLog` rows accumulate on route calculation; reports show totals/scheduled detail; CSV exports open the share sheet (mobile) and download a file (web) with correct rows.
+- Admin: reports show "total rides searched" (from `Ride`), scheduled-ride detail (from `CarpoolRequest`), and breakdowns; CSV exports open the share sheet (mobile) and download a file (web) with correct rows.
 - Backend smoke: `/api/admin/reports`, `/reports/searches`, `/reports/scheduled` return expected shapes for an admin token and 403 for a normal user.
 
 ## Rollout / deferrals
@@ -147,4 +143,4 @@ Repo has no automated test harness (per CLAUDE.md). Verification is manual:
 
 ## Open implementation notes (not blockers)
 - Bottom sheet: prefer a dependency-free implementation; only add a sheet library if the hand-rolled version proves janky.
-- `SearchLog` could later power a richer search-analytics view; out of scope now beyond the total + 30d daily.
+- A dedicated search-event log could later power richer search-analytics (e.g. unauthenticated searches); out of scope now — the `Ride` collection covers the requested total + breakdowns.
