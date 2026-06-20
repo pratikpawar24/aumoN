@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Alert, Image, ActivityIndicator, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
-import { colors, font, radius, spacing } from '../../theme/theme';
+import { colors, font, radius, spacing, TAB_BAR_HEIGHT } from '../../theme/theme';
 import { CONFIG } from '../../constants/config';
 import { useAuth } from '../../context/AuthContext';
 import { apiError } from '../../utils/helpers';
@@ -22,6 +22,7 @@ const VEHICLES = [
 
 const ProfileScreen = () => {
   const { user, updateUser, uploadAvatar, refreshUser, logout } = useAuth();
+  const insets = useSafeAreaInsets();
   const [vehicle, setVehicle] = useState(user?.vehicleType || 'car');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -82,7 +83,7 @@ const ProfileScreen = () => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: TAB_BAR_HEIGHT + insets.bottom + spacing.lg }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         <View style={styles.header}>

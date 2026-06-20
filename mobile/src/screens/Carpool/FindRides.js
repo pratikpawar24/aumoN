@@ -1,7 +1,8 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, RefreshControl, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font, radius, spacing } from '../../theme/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, radius, spacing, TAB_BAR_HEIGHT } from '../../theme/theme';
 import carpoolService from '../../services/carpoolService';
 import locationService from '../../services/locationService';
 import { apiError, estimateEtaMinutes, estimateFare } from '../../utils/helpers';
@@ -13,6 +14,7 @@ const FindRides = ({ onOpenChat }) => {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState(null);
   const [booking, setBooking] = useState(null); // ride being booked
+  const insets = useSafeAreaInsets();
 
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
@@ -40,7 +42,7 @@ const FindRides = ({ onOpenChat }) => {
       <FlatList
         data={rides}
         keyExtractor={(r) => r._id}
-        contentContainerStyle={{ padding: spacing.lg, gap: 10 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: 10, paddingBottom: TAB_BAR_HEIGHT + insets.bottom + spacing.lg }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} />}
         ListEmptyComponent={
           <View style={styles.empty}>

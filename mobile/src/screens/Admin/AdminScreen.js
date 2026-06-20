@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { View, Text, FlatList, TextInput, StyleSheet, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, font, radius, spacing } from '../../theme/theme';
+import { colors, font, radius, spacing, TAB_BAR_HEIGHT } from '../../theme/theme';
 import adminService from '../../services/adminService';
 import { apiError } from '../../utils/helpers';
 import { exportCsv } from '../../utils/csv';
@@ -18,6 +18,7 @@ const AdminScreen = () => {
   const [view, setView] = useState('users'); // 'users' | 'reports'
   const [reports, setReports] = useState(null);
   const [scheduled, setScheduled] = useState(null);
+  const insets = useSafeAreaInsets();
   const timer = useRef(null);
 
   const loadStats = useCallback(async () => {
@@ -133,7 +134,7 @@ const AdminScreen = () => {
       <FlatList
         data={view === 'users' ? users : (scheduled?.rides || [])}
         keyExtractor={(item) => item._id}
-        contentContainerStyle={{ padding: spacing.lg, gap: 10 }}
+        contentContainerStyle={{ padding: spacing.lg, gap: 10, paddingBottom: TAB_BAR_HEIGHT + insets.bottom + spacing.lg }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
         ListHeaderComponent={
           <View style={{ gap: spacing.lg, marginBottom: spacing.sm }}>

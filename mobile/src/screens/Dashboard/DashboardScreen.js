@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { colors, font, radius, spacing } from '../../theme/theme';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { colors, font, radius, spacing, TAB_BAR_HEIGHT } from '../../theme/theme';
 import routeService from '../../services/routeService';
 import mapService from '../../services/mapService';
 import { useAuth } from '../../context/AuthContext';
@@ -12,6 +12,7 @@ const PERIODS = [{ k: 'week', l: 'Week' }, { k: 'month', l: 'Month' }, { k: 'yea
 
 const DashboardScreen = () => {
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
   const [period, setPeriod] = useState('month');
   const [data, setData] = useState(null);
   const [board, setBoard] = useState([]);
@@ -50,7 +51,7 @@ const DashboardScreen = () => {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg }}
+        contentContainerStyle={{ padding: spacing.lg, gap: spacing.lg, paddingBottom: TAB_BAR_HEIGHT + insets.bottom + spacing.lg }}
         refreshControl={<RefreshControl refreshing={loading} onRefresh={load} tintColor={colors.primary} />}
       >
         <View>
