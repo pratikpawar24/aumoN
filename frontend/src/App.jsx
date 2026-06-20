@@ -24,6 +24,7 @@ import AdminLayout      from './components/Admin/AdminLayout';
 import AdminOverview    from './pages/admin/AdminOverview';
 import AdminUsers       from './pages/admin/AdminUsers';
 import AdminUserDetail  from './pages/admin/AdminUserDetail';
+import AdminReports     from './pages/admin/AdminReports';
 import AdminAdmins      from './pages/admin/AdminAdmins';
 import AdminActivity    from './pages/admin/AdminActivity';
 
@@ -96,6 +97,7 @@ const AppRoutes = () => {
           <Route index           element={<AdminOverview />} />
           <Route path="users"    element={<AdminUsers />} />
           <Route path="users/:id" element={<AdminUserDetail />} />
+          <Route path="reports"  element={<AdminReports />} />
           <Route path="admins"   element={<MasterAdminRoute><AdminAdmins /></MasterAdminRoute>} />
           <Route path="activity" element={<MasterAdminRoute><AdminActivity /></MasterAdminRoute>} />
         </Route>

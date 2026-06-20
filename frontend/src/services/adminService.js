@@ -10,6 +10,7 @@ const adminService = {
   verifyUser: async (id) => (await api.patch(`/api/admin/users/${id}/verify`)).data,
   removeUser: async (id) => (await api.delete(`/api/admin/users/${id}`)).data,
   activeRides: async () => (await api.get('/api/admin/rides/active')).data,
+  getReports: async () => (await api.get('/api/admin/reports')).data,
 
   // Master only
   listAdmins: async () => (await api.get('/api/admin/admins')).data,

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Shield, Users, ShieldCheck, LayoutDashboard, LogOut, Activity } from 'lucide-react';
+import { Shield, Users, ShieldCheck, LayoutDashboard, LogOut, Activity, BarChart3 } from 'lucide-react';
 
 const NavItem = ({ to, icon: Icon, label, end }) => (
   <NavLink
@@ -66,6 +66,7 @@ const AdminLayout = () => {
         <aside className="col-span-12 md:col-span-3 lg:col-span-2 space-y-1">
           <NavItem to="/admin"        end icon={LayoutDashboard} label="Overview" />
           <NavItem to="/admin/users"      icon={Users}           label="Users" />
+          <NavItem to="/admin/reports"    icon={BarChart3}       label="Reports" />
           {isMasterAdmin && (
             <>
               <NavItem to="/admin/admins"   icon={ShieldCheck} label="Admins" />
